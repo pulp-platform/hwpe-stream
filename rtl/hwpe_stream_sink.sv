@@ -46,19 +46,19 @@ module hwpe_stream_sink
   logic done;
 
   hwpe_stream_intf_stream #(
-    .DATA_SIZE ( 32 )
+    .DATA_WIDTH ( 32 )
   ) split_streams [NB_TCDM_PORTS-1:0] (
     .clk ( clk_i )
   );
 
   hwpe_stream_intf_stream #(
-    .DATA_SIZE ( DATA_WIDTH )
+    .DATA_WIDTH ( DATA_WIDTH )
   ) realigned_stream (
     .clk ( clk_i )
   );
 
   hwpe_stream_split #(
-    .DATA_SIZE_IN  ( DATA_WIDTH    ),
+    .DATA_WIDTH_IN ( DATA_WIDTH    ),
     .NB_OUT_STREAMS( NB_TCDM_PORTS )
   ) i_stream_split (
     .clk_i    ( clk_i            ),

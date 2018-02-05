@@ -54,12 +54,12 @@ module tb_hwpe_stream_source_realign;
   logic gold_valid_out;
 
   hwpe_stream_intf_stream #(
-    .DATA_SIZE(DS)
+    .DATA_WIDTH(DS)
   ) in (
     .clk ( clk_i )
   );
   hwpe_stream_intf_stream #(
-    .DATA_SIZE(DS)
+    .DATA_WIDTH(DS)
   ) out (
     .clk ( clk_i )
   );
@@ -93,7 +93,7 @@ module tb_hwpe_stream_source_realign;
 
   tb_hwpe_stream_reservoir #(
     .REALIGN_TYPE ( HWPE_STREAM_REALIGN_SOURCE ),
-    .DATA_SIZE    ( DS                         ),
+    .DATA_WIDTH   ( DS                         ),
     .PROB_STALL   ( PROB_STALL                 ),
     .TCP          ( TCP                        ),
     .TA           ( TA                         ),
@@ -123,7 +123,7 @@ module tb_hwpe_stream_source_realign;
   );
 
   tb_hwpe_stream_receiver #(
-    .DATA_SIZE  ( DS         ),
+    .DATA_WIDTH ( DS         ),
     .PROB_STALL ( PROB_STALL ),
     .TCP        ( TCP        ),
     .TA         ( TA         ),

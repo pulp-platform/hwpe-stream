@@ -53,19 +53,19 @@ module hwpe_stream_source
   logic [DATA_WIDTH -1:0] data_int;
 
   hwpe_stream_intf_stream #(
-    .DATA_SIZE ( 32 )
+    .DATA_WIDTH ( 32 )
   ) split_streams [NB_TCDM_PORTS-1:0] (
     .clk ( clk_i )
   );
 
   hwpe_stream_intf_stream #(
-    .DATA_SIZE ( DATA_WIDTH )
+    .DATA_WIDTH ( DATA_WIDTH )
   ) misaligned_stream (
     .clk ( clk_i )
   );
 
   hwpe_stream_merge #(
-    .DATA_SIZE_IN  ( 32            ),
+    .DATA_WIDTH_IN ( 32            ),
     .NB_IN_STREAMS ( NB_TCDM_PORTS )
   ) i_stream_merge (
     .clk_i    ( clk_i              ),
