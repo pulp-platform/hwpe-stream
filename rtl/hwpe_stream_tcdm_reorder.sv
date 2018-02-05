@@ -35,7 +35,7 @@ module hwpe_stream_tcdm_reorder
   input  logic [$clog2(NB_CHAN)-1:0] order_i, 
 
   hwpe_stream_intf_tcdm.slave        in  [NB_CHAN-1:0],
-  hwpe_stream_intf_tcdm.slave        out [NB_CHAN-1:0]
+  hwpe_stream_intf_tcdm.master       out [NB_CHAN-1:0]
   
 );
 
