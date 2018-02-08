@@ -73,7 +73,7 @@ module hwpe_stream_source_realign #(
       strb_rotate_q <= '0;
       strb_rotate_inv_q <= '0;
     end
-    else if (ctrl_i.first) begin
+    else if (~ctrl_i.last_packet & ctrl_i.first) begin
       strb_rotate_q <= strb_rotate_d;
       strb_rotate_inv_q <= strb_rotate_inv_d;
     end
@@ -87,7 +87,8 @@ module hwpe_stream_source_realign #(
       stream_data_q <= '0;
     else if (clear_i)
       stream_data_q <= '0;
-    else if (stream_i.valid & stream_i.ready)
+    // last packet is kept "forever"
+    else if (~ctrl_i.last_packet & stream_i.valid & stream_i.ready)
       stream_data_q <= stream_i.data;
   end
   always_comb
@@ -98,10 +99,12 @@ module hwpe_stream_source_realign #(
         stream_o.data = stream_i.data << strb_rotate_q_shifted | stream_data_q >> strb_rotate_inv_q_shifted;
     end
   end
-  assign stream_o.valid = (~ctrl_i.realign) ? stream_i.valid :
-                                              stream_i.valid & ~ctrl_i.first & (ctrl_i.last | (|strb_i));
-  assign stream_i.ready = (~ctrl_i.realign) ? stream_o.ready :
-                                              stream_o.ready | ctrl_i.first;
+  assign stream_o.valid = (~ctrl_i.realign)    ? stream_i.valid :
+                          (ctrl_i.last_packet) ? stream_i.valid :
+                                                 stream_i.valid & ~ctrl_i.first & (ctrl_i.last | (|strb_i));
+  assign stream_i.ready = (~ctrl_i.realign)    ? stream_o.ready :
+                          (ctrl_i.last_packet) ? stream_o.valid & stream_o.ready :
+                                                 stream_o.ready | ctrl_i.first;
 
   assign stream_o.strb = '1;
 

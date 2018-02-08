@@ -40,7 +40,6 @@ module hwpe_stream_sink
   logic [31:0]                gen_addr;
   logic [NB_TCDM_PORTS*4-1:0] gen_strb;
 
-  logic fifo_ready_push;
   logic address_gen_en;
   logic address_gen_clr;
   logic done;
@@ -83,10 +82,18 @@ module hwpe_stream_sink
     .flags_o        ( flags_o.addressgen_flags )
   );
 
+  /* clock gating */
+  cluster_clock_gating i_realign_gating (
+    .clk_i     ( clk_i                                         ),
+    .test_en_i ( test_mode_i                                   ),
+    .en_i      ( flags_o.addressgen_flags.realign_flags.enable ),
+    .clk_o     ( clk_realign_gated                             )
+  );
+
   hwpe_stream_sink_realign #(
     .DATA_WIDTH ( DATA_WIDTH )
   ) i_realign (
-    .clk_i       ( clk_i                                  ),
+    .clk_i       ( clk_realign_gated                      ),
     .rst_ni      ( rst_ni                                 ),
     .test_mode_i ( test_mode_i                            ),
     .clear_i     ( clear_i                                ),
@@ -104,13 +111,13 @@ module hwpe_stream_sink
       assign tcdm[ii].wen  = 1'b0;
       assign tcdm[ii].be   = split_streams[ii].strb;
       assign tcdm[ii].data = split_streams[ii].data;
-      assign split_streams[ii].ready = tcdm[ii].gnt;
+      assign split_streams[ii].ready = ~split_streams[ii].valid | tcdm[ii].gnt;
     end
   endgenerate
 
   always_ff @(posedge clk_i or negedge rst_ni)
   begin : done_sink_ff
-    if(rst_ni == 1'b0)
+    if(~rst_ni)
       flags_o.done <= 1'b0;
     else if(clear_i)
       flags_o.done <= 1'b0;
@@ -152,11 +159,11 @@ module hwpe_stream_sink
       STREAM_WORKING : begin
         if(stream.valid & stream.ready == 1'b1) begin
           ns = STREAM_WORKING;
-          address_gen_en = stream.valid & stream.ready;
+          address_gen_en = 1'b1;
         end
-        else if(flags_o.addressgen_flags.realign_flags.enable & flags_o.addressgen_flags.realign_flags.last_packet) begin
+        else if(flags_o.addressgen_flags.realign_flags.enable & flags_o.addressgen_flags.realign_flags.last) begin
           ns = STREAM_WORKING;
-          address_gen_en = stream.valid & stream.ready;
+          address_gen_en = 1'b1;
         end
         else if(~flags_o.addressgen_flags.in_progress) begin
           ns = STREAM_IDLE;
@@ -165,7 +172,7 @@ module hwpe_stream_sink
         end
         else begin
           ns = STREAM_WORKING;
-          address_gen_en = stream.valid & stream.ready;
+          address_gen_en = 1'b0;
         end
       end
       default : begin
@@ -175,4 +182,4 @@ module hwpe_stream_sink
     endcase
   end
 
-endmodule
+endmodule // hwpe_stream_sink

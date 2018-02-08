@@ -62,4 +62,22 @@ interface hwpe_stream_intf_stream (
     input  valid, data, strb, ready
   );
 
+`ifndef SYNTHESIS
+  property hwpe_stream_value_change_rule;
+    @(posedge clk)
+    ($past(valid) == 1'b1 & ~($past(valid) & $past(ready))) |-> (data == $past(data)) && (strb == $past(strb));
+  endproperty;
+
+  property hwpe_stream_valid_deassert_rule;
+    @(posedge clk)
+    ($past(valid) & ~valid) |-> $past(valid) & $past(ready);
+  endproperty;
+
+  hwpe_stream_value_change_assert:   assert property(hwpe_stream_value_change_rule)
+    else $fatal("ASSERTION FAILURE hwpe_stream_value_change_assert", 1);
+
+  hwpe_stream_valid_deassert_assert: assert property(hwpe_stream_valid_deassert_rule)
+    else $fatal("ASSERTION FAILURE hwpe_stream_valid_deassert_assert", 1);
+`endif
+
 endinterface // hwpe_stream_intf_stream

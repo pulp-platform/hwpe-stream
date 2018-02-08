@@ -61,6 +61,9 @@ module hwpe_stream_addressgen
   logic [31:0]    line_addr;
   logic [31:0]    feat_addr;
 
+  logic [STEP-1:0] gen_strb_int;
+  logic [STEP-1:0] gen_strb_r;
+
   flags_addressgen_t flags;
 
   assign base_addr      = ctrl_i.base_addr;
@@ -92,7 +95,7 @@ module hwpe_stream_addressgen
     else if(clear_i)
       flags.realign_flags.last_packet <= '0;
     else if(enable_int)
-      flags.realign_flags.last_packet <= last_packet;
+      flags.realign_flags.last_packet <= (misalignment==1'b1 && overall_counter == trans_size_m2) ? 1'b1 : 1'b0;
   end
 
   // flags generation
@@ -123,33 +126,24 @@ module hwpe_stream_addressgen
   end
 
   // misalignment flags generation
-  always_ff @(posedge clk_i or negedge rst_ni)
-  begin : misalignment_last_flags_seq
-    if(~rst_ni)
-      misalignment_last <= '0;
-    else if(clear_i)
-      misalignment_last <= '0;
-    else begin
-      if(enable_int == 1'b1) begin
-        if(word_counter < line_length_m1-1) begin
-          misalignment_last  <= '0;
-        end
-        else if(line_counter < feat_length_m1-1) begin
-          misalignment_last  <= '1;
-        end
-        else begin
-          misalignment_last  <= '1;
-        end
+  always_comb
+  begin : misalignment_last_flags_comb
+    if(enable_int == 1'b1) begin
+      if(word_counter < line_length_m1) begin
+        misalignment_last  <= '0;
       end
       else begin
-        misalignment_last <= '0;
+        misalignment_last  <= '1;
       end
+    end
+    else begin
+      misalignment_last <= '0;
     end
   end
   always_comb
   begin : misalignment_first_flags_comb
     misalignment_first  = '0;
-    if(word_counter == '0)
+    if((enable_int == 1'b1) && (word_counter == '0))
       misalignment_first  = '1;
   end
 
@@ -302,18 +296,18 @@ module hwpe_stream_addressgen
   
   always_comb
   begin
-    gen_strb_o = '1;
+    gen_strb_int = '1;
     if(misalignment) begin
       if (misalignment_first) begin
-        gen_strb_o =   gen_strb_o << gen_addr_int[$clog2(STEP)-1:0];
+        gen_strb_int =   gen_strb_int << gen_addr_int[$clog2(STEP)-1:0];
       end
       if (misalignment_last) begin
-        gen_strb_o = ~(gen_strb_o << gen_addr_int[$clog2(STEP)-1:0]);
+        gen_strb_int = ~(gen_strb_int << gen_addr_int[$clog2(STEP)-1:0]);
       end
     end
   end
 
-  assign flags.realign_flags.enable  = misalignment; // FIXME
+  assign flags.realign_flags.enable  = misalignment;
   assign flags.realign_flags.realign = misalignment;
   assign flags.realign_flags.first   = misalignment_first;
   assign flags.realign_flags.last    = misalignment_last;
@@ -323,7 +317,14 @@ module hwpe_stream_addressgen
     // auxiliary variable used to avoid conflicts between always_ff & assign
     flags_addressgen_t aux;
 
-    assign flags_o.realign_flags = flags.realign_flags;
+    if(REALIGN_TYPE == HWPE_STREAM_REALIGN_SOURCE) begin
+      assign flags_o.realign_flags = aux.realign_flags;
+      assign gen_strb_o = gen_strb_r;
+    end
+    else begin
+      assign flags_o.realign_flags = flags.realign_flags;
+      assign gen_strb_o = gen_strb_int;
+    end
     assign flags_o.word_update = aux.word_update;
     assign flags_o.line_update = aux.line_update;
     assign flags_o.feat_update = aux.feat_update;
@@ -336,17 +337,21 @@ module hwpe_stream_addressgen
       begin
         if(~rst_ni) begin
           aux <= '0;
+          gen_strb_r <= '0;
         end
         else if(clear_i) begin
           aux <= '0;
+          gen_strb_r <= '0;
         end
         else begin
           aux <= flags;
+          gen_strb_r <= gen_strb_int;
         end
       end
     end
     else begin : no_delay_flags_gen
       assign aux = flags;
+      assign gen_strb_r = gen_strb_int;
     end
   endgenerate
 

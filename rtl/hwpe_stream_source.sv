@@ -75,6 +75,7 @@ module hwpe_stream_source
     .stream_o ( misaligned_stream  )
   );
 
+  // generate addresses
   hwpe_stream_addressgen #(
     .STEP         ( NB_TCDM_PORTS*4            ),
     .REALIGN_TYPE ( HWPE_STREAM_REALIGN_SOURCE )
@@ -90,6 +91,7 @@ module hwpe_stream_source
     .flags_o        ( flags_o.addressgen_flags )
   );
 
+  // realign the merged stream
   hwpe_stream_source_realign #(
     .DATA_WIDTH ( DATA_WIDTH )
   ) i_realign (
@@ -106,14 +108,48 @@ module hwpe_stream_source
   // tcdm ports binding
   generate
     for(genvar ii=0; ii<NB_TCDM_PORTS; ii++) begin: tcdm_binding
+      logic        stream_valid_w, stream_valid_r;
+      logic [31:0] stream_data_w,  stream_data_r;
+
       assign tcdm[ii].req  = tcdm_int_req;
       assign tcdm[ii].add  = gen_addr + ii*4;
       assign tcdm[ii].wen  = 1'b1;
       assign tcdm[ii].be   = 4'h0;
       assign tcdm[ii].data = '0; 
       assign tcdm_split_gnt[ii] = tcdm[ii].gnt;
-      assign split_streams[ii].data  = tcdm[ii].r_data;
-      assign split_streams[ii].valid = tcdm[ii].r_valid; // (clear_i) ? 1'b1 : tcdm[ii].r_valid;
+      assign split_streams[ii].strb  = '1;
+      assign split_streams[ii].data  = (stream_valid_w) ? stream_data_w : stream_data_r;
+      assign split_streams[ii].valid = stream_valid_w | stream_valid_r;
+
+      assign stream_data_w  = tcdm[ii].r_data;
+      assign stream_valid_w = tcdm[ii].r_valid;
+
+      always_ff @(posedge clk_i or negedge rst_ni)
+      begin
+        if(~rst_ni)
+          stream_valid_r <= 1'b0;
+        else if(clear_i)
+          stream_valid_r <= 1'b0;
+        else begin
+          if(stream_valid_w & split_streams[ii].ready)
+            stream_valid_r <= 1'b0;
+          else if(stream_valid_w)
+            stream_valid_r <= 1'b1;
+          else if(stream_valid_r & split_streams[ii].ready)
+            stream_valid_r <= 1'b0;
+        end
+      end
+
+      always_ff @(posedge clk_i or negedge rst_ni)
+      begin
+        if(~rst_ni)
+          stream_data_r <= '0;
+        else if(clear_i)
+          stream_data_r <= '0;
+        else if(stream_valid_w)
+            stream_data_r <= stream_data_w;
+      end
+
     end
   endgenerate
 
@@ -140,9 +176,9 @@ module hwpe_stream_source
 
   always_ff @(posedge clk_i or negedge rst_ni)
   begin : done_source_ff
-    if(rst_ni == 1'b0)
+    if(~rst_ni)
       flags_o.done <= 1'b0;
-    else if(clear_i == 1'b0)
+    else if(clear_i)
       flags_o.done <= 1'b0;
     else
       flags_o.done <= done;
@@ -180,7 +216,7 @@ module hwpe_stream_source
           address_gen_en = 1'b0;
         end
         if(tcdm_int_gnt) begin
-          if(flags_o.addressgen_flags.in_progress == 1'b1) begin
+          if(flags_o.addressgen_flags.in_progress | (~tcdm_int_gnt & tcdm_int_req)) begin
             ns = STREAM_WORKING;
           end
           else begin
@@ -200,4 +236,4 @@ module hwpe_stream_source
     endcase
   end
 
-endmodule
+endmodule // hwpe_stream_source
