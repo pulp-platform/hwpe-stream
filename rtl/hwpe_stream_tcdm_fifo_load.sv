@@ -32,6 +32,9 @@ module hwpe_stream_tcdm_fifo_load #(
 
   logic incoming_fifo_not_full;
 
+  logic        tcdm_master_r_valid_w, tcdm_master_r_valid_r;
+  logic [31:0] tcdm_master_r_data_w, tcdm_master_r_data_r;
+
   hwpe_stream_intf_stream #(
     .DATA_WIDTH ( 32 )
   ) stream_outgoing_push (
@@ -55,53 +58,81 @@ module hwpe_stream_tcdm_fifo_load #(
   );
 
   // wrap tcdm incoming ports into a stream
-  assign stream_incoming_push.data  = tcdm_master.r_data;
-  assign stream_incoming_push.valid = tcdm_master.r_valid;
-  always_ff @(posedge clk_i or negedge rst_ni)
-  begin : incoming_fifo_not_full_ff
-    if(~rst_ni) begin
-      incoming_fifo_not_full <= 1'b0;
-    end
-    else begin
-      incoming_fifo_not_full <= stream_incoming_push.ready;
-    end
-  end
+  assign stream_incoming_push.data  = tcdm_master_r_valid_w ? tcdm_master_r_data_w : tcdm_master_r_data_r;
+  assign stream_incoming_push.valid = tcdm_master_r_valid_w | tcdm_master_r_valid_r;
+  assign stream_incoming_push.strb = '1;
+
+  assign incoming_fifo_not_full = stream_incoming_push.ready;
 
   assign tcdm_slave.r_data  = stream_incoming_pop.data;
   assign tcdm_slave.r_valid = stream_incoming_pop.valid;
   assign stream_incoming_pop.ready = ready_i;
+
+  // enforce protocol on incoming stream
+  assign tcdm_master_r_data_w = tcdm_master.r_data;
+  assign tcdm_master_r_valid_w = tcdm_master.r_valid;
+
+  always_ff @(posedge clk_i or negedge rst_ni)
+  begin
+    if(~rst_ni)
+      tcdm_master_r_valid_r <= 1'b0;
+    else if(clear_i)
+      tcdm_master_r_valid_r <= 1'b0;
+    else begin
+      if(tcdm_master_r_valid_w & stream_incoming_push.ready)
+        tcdm_master_r_valid_r <= 1'b0;
+      else if(tcdm_master_r_valid_w)
+        tcdm_master_r_valid_r <= 1'b1;
+      else if(tcdm_master_r_valid_r & stream_incoming_push.ready)
+        tcdm_master_r_valid_r <= 1'b0;
+    end
+  end
+
+  always_ff @(posedge clk_i or negedge rst_ni)
+  begin
+    if(~rst_ni)
+      tcdm_master_r_data_r <= '0;
+    else if(clear_i)
+      tcdm_master_r_data_r <= '0;
+    else if(tcdm_master_r_valid_w)
+        tcdm_master_r_data_r <= tcdm_master_r_data_w;
+  end
 
   hwpe_stream_fifo_earlystall #(
     .DATA_WIDTH ( 32         ),
     .FIFO_DEPTH ( FIFO_DEPTH ),
     .LATCH_FIFO ( LATCH_FIFO )
   ) i_fifo_incoming (
-    .clk_i       ( clk_i                      ),
-    .rst_ni      ( rst_ni                     ),
-    .clear_i     ( clear_i                    ),
-    .tcdm_slave  ( stream_incoming_push.sink  ),
-    .tcdm_master ( stream_incoming_pop.source )
+    .clk_i   ( clk_i                      ),
+    .rst_ni  ( rst_ni                     ),
+    .clear_i ( clear_i                    ),
+    .push_i  ( stream_incoming_push.sink  ),
+    .pop_o   ( stream_incoming_pop.source )
   );
 
   // wrap tcdm outgoing ports into a stream
   assign stream_outgoing_push.data = tcdm_slave.add;
+  assign stream_outgoing_push.strb = '1;
   assign stream_outgoing_push.valid = tcdm_slave.req;
   assign tcdm_slave.gnt = stream_outgoing_push.ready;
 
   assign tcdm_master.add = stream_outgoing_pop.data;
   assign tcdm_master.req = stream_outgoing_pop.valid & incoming_fifo_not_full;
-  assign stream_outgoing_pop.ready = tcdm_master.gnt; // if incoming_fifo_not_full=0, gnt must be 0 because req=0
+  assign tcdm_master.wen = '1;
+  assign tcdm_master.be  = '1;
+  assign tcdm_master.data = '0;
+  assign stream_outgoing_pop.ready = tcdm_master.gnt; // if incoming_fifo_not_full=0, gnt is already 0, because req=0
 
   hwpe_stream_fifo #(
     .DATA_WIDTH ( 32         ),
     .FIFO_DEPTH ( FIFO_DEPTH ),
     .LATCH_FIFO ( LATCH_FIFO )
   ) i_fifo_outgoing (
-    .clk_i       ( clk_i                      ),
-    .rst_ni      ( rst_ni                     ),
-    .clear_i     ( clear_i                    ),
-    .tcdm_slave  ( stream_outgoing_push.sink  ),
-    .tcdm_master ( stream_outgoing_pop.source )
+    .clk_i   ( clk_i                      ),
+    .rst_ni  ( rst_ni                     ),
+    .clear_i ( clear_i                    ),
+    .push_i  ( stream_outgoing_push.sink  ),
+    .pop_o   ( stream_outgoing_pop.source )
   );
 
 endmodule // hwpe_stream_tcdm_fifo_load

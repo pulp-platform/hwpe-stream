@@ -29,39 +29,39 @@ module hwpe_stream_tcdm_fifo_store #(
 );
 
   hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( 64 )
+    .DATA_WIDTH ( 68 )
   ) stream_push (
     .clk ( clk_i )
   );
   hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( 64 )
+    .DATA_WIDTH ( 68 )
   ) stream_pop (
     .clk ( clk_i )
   );
 
   // wrap tcdm ports into a stream
-  assign stream_push.data  = { tcdm_slave.data, tcdm_slave.add };
+  assign stream_push.data  = { tcdm_slave.be, tcdm_slave.data, tcdm_slave.add };
+  assign stream_push.strb  = '1;
   assign stream_push.valid = tcdm_slave.req;
   assign tcdm_slave.gnt = stream_push.ready;
 
-  assign { tcdm_master.data, tcdm_master.add } = stream_pop.data;
+  assign { tcdm_master.be, tcdm_master.data, tcdm_master.add } = stream_pop.data;
   assign tcdm_master.req = stream_pop.valid;
   assign stream_pop.ready = tcdm_master.gnt;
 
-  // byte and write enable always set to full-word write
-  assign tcdm_master.be  = '1;
+  // write enable always set to write
   assign tcdm_master.wen = 1'b0;
 
   hwpe_stream_fifo #(
-    .DATA_WIDTH ( 64         ),
+    .DATA_WIDTH ( 68         ),
     .FIFO_DEPTH ( FIFO_DEPTH ),
     .LATCH_FIFO ( LATCH_FIFO )
   ) i_fifo (
-    .clk_i       ( clk_i             ),
-    .rst_ni      ( rst_ni            ),
-    .clear_i     ( clear_i           ),
-    .tcdm_slave  ( stream_push.sink  ),
-    .tcdm_master ( stream_pop.source )
+    .clk_i   ( clk_i             ),
+    .rst_ni  ( rst_ni            ),
+    .clear_i ( clear_i           ),
+    .push_i  ( stream_push.sink  ),
+    .pop_o   ( stream_pop.source )
   );
 
 endmodule // hwpe_stream_tcdm_fifo_store
