@@ -128,18 +128,23 @@ module hwpe_stream_addressgen
   // misalignment flags generation
   always_comb
   begin : misalignment_last_flags_comb
+    // if(enable_int == 1'b1) begin
     if(word_counter < line_length_m1) begin
-      misalignment_last <= '0;
+      misalignment_last  <= '0;
     end
     else begin
-      misalignment_last <= '1;
+      misalignment_last  <= '1;
     end
+    // end
+    // else begin
+    //   misalignment_last <= '0;
+    // end
   end
   always_comb
   begin : misalignment_first_flags_comb
-    misalignment_first = '0;
+    misalignment_first  = '0;
     if(word_counter == '0)
-      misalignment_first = '1;
+      misalignment_first  = '1;
   end
 
   // address generation

@@ -38,6 +38,20 @@ interface hwpe_stream_intf_tcdm (
     input  req, add, wen, be, data, gnt, r_data, r_valid
   );
 
+`ifndef SYNTHESIS
+  // The r_valid signal must be asserted the cycle after a valid read handshake;
+  // r_data must be valid on this cycle. This is due to the tightly-coupled
+  // memories; if the memory cannot respond in one cycle, it must delay
+  // granting the transaction.
+  property hwpe_tcdm_r_valid_rule;
+    @(posedge clk)
+    ($past(req) & $past(gnt) & $past(wen)) |-> r_valid;
+  endproperty;
+
+  HWPE_TCDM_R_VALID: assert property(hwpe_tcdm_r_valid_rule)
+    else $fatal("ASSERTION FAILURE HWPE_TCDM_R_VALID", 1);
+`endif
+
 endinterface // hwpe_stream_intf_tcdm
 
 interface hwpe_stream_intf_stream (
@@ -63,21 +77,28 @@ interface hwpe_stream_intf_stream (
   );
 
 `ifndef SYNTHESIS
+  // The data and strb can change their value 1) when valid is deasserted,
+  // 2) in the cycle after a valid handshake, even if valid remains asserted.
+  // In other words, valid data must remain on the interface until
+  // a valid handshake has occurred.
   property hwpe_stream_value_change_rule;
     @(posedge clk)
-    ($past(valid) == 1'b1 & ~($past(valid) & $past(ready))) |-> (data == $past(data)) && (strb == $past(strb));
+    ($past(valid) & ~($past(valid) & $past(ready))) |-> (data == $past(data)) && (strb == $past(strb));
   endproperty;
-
+  
+  // The deassertion of valid (transition 1í0) can happen only in the cycle
+  // after a valid handshake. In other words, valid data produced by a source
+  // must be consumed on the sink side before valid is deasserted.
   property hwpe_stream_valid_deassert_rule;
     @(posedge clk)
     ($past(valid) & ~valid) |-> $past(valid) & $past(ready);
   endproperty;
 
-  hwpe_stream_value_change_assert:   assert property(hwpe_stream_value_change_rule)
-    else $fatal("ASSERTION FAILURE hwpe_stream_value_change_assert", 1);
+  HWPE_STREAM_VALUE_CHANGE:   assert property(hwpe_stream_value_change_rule)
+    else $fatal("ASSERTION FAILURE: HWPE_STREAM_VALUE_CHANGE", 1);
 
-  hwpe_stream_valid_deassert_assert: assert property(hwpe_stream_valid_deassert_rule)
-    else $fatal("ASSERTION FAILURE hwpe_stream_valid_deassert_assert", 1);
+  HWPE_STREAM_VALID_DEASSERT: assert property(hwpe_stream_valid_deassert_rule)
+    else $fatal("ASSERTION FAILURE HWPE_STREAM_VALID_DEASSERT", 1);
 `endif
 
 endinterface // hwpe_stream_intf_stream
