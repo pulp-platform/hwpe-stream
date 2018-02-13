@@ -40,6 +40,7 @@ module hwpe_stream_sink
   logic [31:0]                gen_addr;
   logic [NB_TCDM_PORTS*4-1:0] gen_strb;
 
+  logic clk_realign_gated;
   logic address_gen_en;
   logic address_gen_clr;
   logic done;
