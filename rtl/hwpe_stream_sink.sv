@@ -40,10 +40,13 @@ module hwpe_stream_sink
   logic [31:0]                gen_addr;
   logic [NB_TCDM_PORTS*4-1:0] gen_strb;
 
-  logic clk_realign_gated;
   logic address_gen_en;
   logic address_gen_clr;
   logic done;
+
+  logic clk_realign_gated;
+  logic [NB_TCDM_PORTS-1:0] tcdm_inflight;
+  logic tcdm_inflight_any;
 
   hwpe_stream_intf_stream #(
     .DATA_WIDTH ( 32 )
@@ -54,6 +57,9 @@ module hwpe_stream_sink
   hwpe_stream_intf_stream #(
     .DATA_WIDTH ( DATA_WIDTH )
   ) realigned_stream (
+    .clk ( clk_realign_gated )
+  );
+  hwpe_stream_intf_tcdm tcdm_prefifo [NB_TCDM_PORTS-1:0] (
     .clk ( clk_i )
   );
 
@@ -69,8 +75,9 @@ module hwpe_stream_sink
   );
 
   hwpe_stream_addressgen #(
-    .STEP         ( NB_TCDM_PORTS*4            ),
-    .REALIGN_TYPE ( HWPE_STREAM_REALIGN_SINK   )
+    .STEP         ( NB_TCDM_PORTS*4          ),
+    .REALIGN_TYPE ( HWPE_STREAM_REALIGN_SINK ),
+    .DELAY_FLAGS  ( 1                        )
   ) i_addressgen (
     .clk_i          ( clk_i                    ),
     .rst_ni         ( rst_ni                   ),
@@ -107,14 +114,35 @@ module hwpe_stream_sink
   // tcdm ports binding
   generate
     for(genvar ii=0; ii<NB_TCDM_PORTS; ii++) begin: tcdm_binding
-      assign tcdm[ii].req  = split_streams[ii].valid;
-      assign tcdm[ii].add  = gen_addr + ii*4;
-      assign tcdm[ii].wen  = 1'b0;
-      assign tcdm[ii].be   = split_streams[ii].strb;
-      assign tcdm[ii].data = split_streams[ii].data;
-      assign split_streams[ii].ready = ~split_streams[ii].valid | tcdm[ii].gnt;
+
+      assign tcdm_prefifo[ii].req  = (cs == STREAM_WORKING) ? split_streams[ii].valid : '0;
+      assign tcdm_prefifo[ii].add  = (cs == STREAM_WORKING) ? gen_addr + ii*4        : '0;
+      assign tcdm_prefifo[ii].wen  = (cs == STREAM_WORKING) ? 1'b0                   : '0;
+      assign tcdm_prefifo[ii].be   = (cs == STREAM_WORKING) ? split_streams[ii].strb  : '0;
+      assign tcdm_prefifo[ii].data = (cs == STREAM_WORKING) ? split_streams[ii].data  : '0;
+      assign split_streams[ii].ready = ~split_streams[ii].valid | tcdm_prefifo[ii].gnt;
+
+      hwpe_stream_tcdm_fifo_store #(
+        .FIFO_DEPTH ( 4 )
+      ) i_tcdm_fifo (
+        .clk_i       ( clk_i             ),
+        .rst_ni      ( rst_ni            ),
+        .clear_i     ( clear_i           ),
+        .tcdm_slave  ( tcdm_prefifo [ii] ),
+        .tcdm_master ( tcdm [ii]         )
+      );
+
+      assign tcdm_inflight[ii] = tcdm[ii].req;
+
     end
   endgenerate
+
+  always_comb
+  begin
+    tcdm_inflight_any = '0;
+    for(int i=0; i<NB_TCDM_PORTS; i++)
+      tcdm_inflight_any = tcdm_inflight_any | tcdm_inflight[i];
+  end
 
   always_ff @(posedge clk_i or negedge rst_ni)
   begin : done_sink_ff
@@ -158,13 +186,17 @@ module hwpe_stream_sink
         end
       end
       STREAM_WORKING : begin
-        if(stream.valid & stream.ready == 1'b1) begin
+        if(stream.valid & stream.ready) begin
           ns = STREAM_WORKING;
           address_gen_en = 1'b1;
         end
         else if(flags_o.addressgen_flags.realign_flags.enable & flags_o.addressgen_flags.realign_flags.last) begin
           ns = STREAM_WORKING;
           address_gen_en = 1'b1;
+        end
+        else if(~flags_o.addressgen_flags.in_progress & tcdm_inflight_any) begin // if transactions in flight, let them end
+          ns = STREAM_WORKING;
+          address_gen_en  = 1'b0;
         end
         else if(~flags_o.addressgen_flags.in_progress) begin
           ns = STREAM_IDLE;
