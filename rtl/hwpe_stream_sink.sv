@@ -202,6 +202,7 @@ module hwpe_stream_sink
           ns = STREAM_IDLE;
           done = 1'b1;
           address_gen_en  = 1'b0;
+          address_gen_clr = 1'b1;
         end
         else begin
           ns = STREAM_WORKING;
