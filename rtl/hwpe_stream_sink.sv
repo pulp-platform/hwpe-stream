@@ -18,8 +18,9 @@ import hwpe_stream_package::*;
 module hwpe_stream_sink
 #(
   // Stream interface params
-  parameter int unsigned DATA_WIDTH    = 32,
-  parameter int unsigned NB_TCDM_PORTS = DATA_WIDTH/32
+  parameter int unsigned DATA_WIDTH     = 32,
+  parameter int unsigned NB_TCDM_PORTS  = DATA_WIDTH/32,
+  parameter int unsigned USE_TCDM_FIFOS = 1
 )
 (
   input logic clk_i,
@@ -115,22 +116,36 @@ module hwpe_stream_sink
   generate
     for(genvar ii=0; ii<NB_TCDM_PORTS; ii++) begin: tcdm_binding
 
-      assign tcdm_prefifo[ii].req  = (cs == STREAM_WORKING) ? split_streams[ii].valid : '0;
-      assign tcdm_prefifo[ii].add  = (cs == STREAM_WORKING) ? gen_addr + ii*4        : '0;
-      assign tcdm_prefifo[ii].wen  = (cs == STREAM_WORKING) ? 1'b0                   : '0;
-      assign tcdm_prefifo[ii].be   = (cs == STREAM_WORKING) ? split_streams[ii].strb  : '0;
-      assign tcdm_prefifo[ii].data = (cs == STREAM_WORKING) ? split_streams[ii].data  : '0;
-      assign split_streams[ii].ready = ~split_streams[ii].valid | tcdm_prefifo[ii].gnt;
+      if(USE_TCDM_FIFOS) begin: tcdm_fifos_gen
 
-      hwpe_stream_tcdm_fifo_store #(
-        .FIFO_DEPTH ( 4 )
-      ) i_tcdm_fifo (
-        .clk_i       ( clk_i             ),
-        .rst_ni      ( rst_ni            ),
-        .clear_i     ( clear_i           ),
-        .tcdm_slave  ( tcdm_prefifo [ii] ),
-        .tcdm_master ( tcdm [ii]         )
-      );
+        assign tcdm_prefifo[ii].req  = (cs == STREAM_WORKING) ? split_streams[ii].valid : '0;
+        assign tcdm_prefifo[ii].add  = (cs == STREAM_WORKING) ? gen_addr + ii*4         : '0;
+        assign tcdm_prefifo[ii].wen  = (cs == STREAM_WORKING) ? 1'b0                    : '0;
+        assign tcdm_prefifo[ii].be   = (cs == STREAM_WORKING) ? split_streams[ii].strb  : '0;
+        assign tcdm_prefifo[ii].data = (cs == STREAM_WORKING) ? split_streams[ii].data  : '0;
+        assign split_streams[ii].ready = ~split_streams[ii].valid | tcdm_prefifo[ii].gnt;
+
+        hwpe_stream_tcdm_fifo_store #(
+          .FIFO_DEPTH ( 4 )
+        ) i_tcdm_fifo (
+          .clk_i       ( clk_i             ),
+          .rst_ni      ( rst_ni            ),
+          .clear_i     ( clear_i           ),
+          .tcdm_slave  ( tcdm_prefifo [ii] ),
+          .tcdm_master ( tcdm [ii]         )
+        );
+
+      end
+      else begin: no_tcdm_fifos_gen
+
+        assign tcdm[ii].req  = (cs == STREAM_WORKING) ? split_streams[ii].valid : '0;
+        assign tcdm[ii].add  = (cs == STREAM_WORKING) ? gen_addr + ii*4         : '0;
+        assign tcdm[ii].wen  = (cs == STREAM_WORKING) ? 1'b0                    : '0;
+        assign tcdm[ii].be   = (cs == STREAM_WORKING) ? split_streams[ii].strb  : '0;
+        assign tcdm[ii].data = (cs == STREAM_WORKING) ? split_streams[ii].data  : '0;
+        assign split_streams[ii].ready = ~split_streams[ii].valid | tcdm[ii].gnt;
+
+      end
 
       assign tcdm_inflight[ii] = tcdm[ii].req;
 
