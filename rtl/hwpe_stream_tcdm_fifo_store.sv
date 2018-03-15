@@ -61,7 +61,8 @@ module hwpe_stream_tcdm_fifo_store #(
     .rst_ni  ( rst_ni            ),
     .clear_i ( clear_i           ),
     .push_i  ( stream_push.sink  ),
-    .pop_o   ( stream_pop.source )
+    .pop_o   ( stream_pop.source ),
+    .flags_o (                   )
   );
 
 endmodule // hwpe_stream_tcdm_fifo_store
