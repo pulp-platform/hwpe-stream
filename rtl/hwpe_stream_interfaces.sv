@@ -16,6 +16,9 @@
 interface hwpe_stream_intf_tcdm (
   input logic clk
 );
+`ifndef SYNTHESIS
+  parameter bit BYPASS_TRVR_ASSERT = 1'b0;
+`endif
 
   logic        req;
   logic        gnt;
@@ -45,7 +48,7 @@ interface hwpe_stream_intf_tcdm (
   // granting the transaction.
   property hwpe_tcdm_r_valid_rule;
     @(posedge clk)
-    ($past(req) & $past(gnt) & $past(wen)) |-> r_valid;
+    ($past(req) & $past(gnt) & $past(wen)) |-> (r_valid) | BYPASS_TRVR_ASSERT;
   endproperty;
 
   HWPE_TCDM_R_VALID: assert property(hwpe_tcdm_r_valid_rule)
@@ -58,6 +61,10 @@ interface hwpe_stream_intf_stream (
   input logic clk
 );
   parameter int unsigned DATA_WIDTH = -1;
+`ifndef SYNTHESIS
+  parameter bit BYPASS_VCR_ASSERT = 1'b0;
+  parameter bit BYPASS_VDR_ASSERT = 1'b0;
+`endif
 
   logic                    valid;
   logic                    ready;
@@ -83,7 +90,7 @@ interface hwpe_stream_intf_stream (
   // a valid handshake has occurred.
   property hwpe_stream_value_change_rule;
     @(posedge clk)
-    ($past(valid) & ~($past(valid) & $past(ready))) |-> (data == $past(data)) && (strb == $past(strb));
+    ($past(valid) & ~($past(valid) & $past(ready))) |-> ((data == $past(data)) && (strb == $past(strb))) | BYPASS_VCR_ASSERT;
   endproperty;
   
   // The deassertion of valid (transition 1í0) can happen only in the cycle
@@ -91,7 +98,7 @@ interface hwpe_stream_intf_stream (
   // must be consumed on the sink side before valid is deasserted.
   property hwpe_stream_valid_deassert_rule;
     @(posedge clk)
-    ($past(valid) & ~valid) |-> $past(valid) & $past(ready);
+    ($past(valid) & ~valid) |-> ($past(valid) & $past(ready)) | BYPASS_VDR_ASSERT;
   endproperty;
 
   HWPE_STREAM_VALUE_CHANGE:   assert property(hwpe_stream_value_change_rule)
