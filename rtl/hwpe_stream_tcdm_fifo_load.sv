@@ -37,22 +37,42 @@ module hwpe_stream_tcdm_fifo_load #(
 
   hwpe_stream_intf_stream #(
     .DATA_WIDTH ( 32 )
+`ifndef SYNTHESIS
+    ,
+    .BYPASS_VCR_ASSERT ( 1'b1 ),
+    .BYPASS_VDR_ASSERT ( 1'b1 )
+`endif
   ) stream_outgoing_push (
     .clk ( clk_i )
   );
   hwpe_stream_intf_stream #(
     .DATA_WIDTH ( 32 )
+`ifndef SYNTHESIS
+    ,
+    .BYPASS_VCR_ASSERT ( 1'b1 ),
+    .BYPASS_VDR_ASSERT ( 1'b1 )
+`endif
   ) stream_outgoing_pop (
     .clk ( clk_i )
   );
 
   hwpe_stream_intf_stream #(
     .DATA_WIDTH ( 32 )
+`ifndef SYNTHESIS
+    ,
+    .BYPASS_VCR_ASSERT ( 1'b1 ),
+    .BYPASS_VDR_ASSERT ( 1'b1 )
+`endif
   ) stream_incoming_push (
     .clk ( clk_i )
   );
   hwpe_stream_intf_stream #(
     .DATA_WIDTH ( 32 )
+`ifndef SYNTHESIS
+    ,
+    .BYPASS_VCR_ASSERT ( 1'b1 ),
+    .BYPASS_VDR_ASSERT ( 1'b1 )
+`endif
   ) stream_incoming_pop (
     .clk ( clk_i )
   );

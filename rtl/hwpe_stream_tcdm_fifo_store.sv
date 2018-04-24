@@ -24,17 +24,29 @@ module hwpe_stream_tcdm_fifo_store #(
   input  logic                 rst_ni,
   input  logic                 clear_i,
   
+  output flags_fifo_t            flags_o,
+  
   hwpe_stream_intf_tcdm.slave  tcdm_slave,
   hwpe_stream_intf_tcdm.master tcdm_master
 );
 
   hwpe_stream_intf_stream #(
     .DATA_WIDTH ( 68 )
+`ifndef SYNTHESIS
+    ,
+    .BYPASS_VCR_ASSERT ( 1'b1 ),
+    .BYPASS_VDR_ASSERT ( 1'b1 )
+`endif
   ) stream_push (
     .clk ( clk_i )
   );
   hwpe_stream_intf_stream #(
     .DATA_WIDTH ( 68 )
+`ifndef SYNTHESIS
+    ,
+    .BYPASS_VCR_ASSERT ( 1'b1 ),
+    .BYPASS_VDR_ASSERT ( 1'b1 )
+`endif
   ) stream_pop (
     .clk ( clk_i )
   );
@@ -62,7 +74,7 @@ module hwpe_stream_tcdm_fifo_store #(
     .clear_i ( clear_i           ),
     .push_i  ( stream_push.sink  ),
     .pop_o   ( stream_pop.source ),
-    .flags_o (                   )
+    .flags_o ( flags_o           )
   );
 
 endmodule // hwpe_stream_tcdm_fifo_store
