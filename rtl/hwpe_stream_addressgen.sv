@@ -73,8 +73,7 @@ module hwpe_stream_addressgen
   assign line_length_m1 = (misalignment == 1'b0) ? ctrl_i.line_length - 1 :
                                                    ctrl_i.line_length;
   assign feat_stride    = ctrl_i.feat_stride;
-  assign feat_length_m1 = (misalignment == 1'b0) ? ctrl_i.feat_length - 1 :
-                                                   ctrl_i.feat_length;
+  assign feat_length_m1 = ctrl_i.feat_length - 1;
   assign feat_roll_m1   = ctrl_i.feat_roll - 1;
 
   generate
