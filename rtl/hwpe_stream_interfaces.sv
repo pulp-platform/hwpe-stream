@@ -17,7 +17,9 @@ interface hwpe_stream_intf_tcdm (
   input logic clk
 );
 `ifndef SYNTHESIS
-  parameter bit BYPASS_TRVR_ASSERT = 1'b0;
+  // the TRVR assert is disabled by default, as it is only valid for zero-latency
+  // accesses (e.g. using FIFO queues breaks this assumption)
+  parameter bit BYPASS_TRVR_ASSERT = 1'b1;
 `endif
 
   logic        req;

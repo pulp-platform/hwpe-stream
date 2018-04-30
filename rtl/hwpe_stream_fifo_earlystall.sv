@@ -22,9 +22,11 @@ module hwpe_stream_fifo_earlystall #(
   parameter int unsigned LATCH_FIFO = 0
 )
 (
-  input  logic clk_i,
-  input  logic rst_ni,
-  input  logic clear_i,
+  input  logic                   clk_i,
+  input  logic                   rst_ni,
+  input  logic                   clear_i,
+  
+  output flags_fifo_t            flags_o,
 
   hwpe_stream_intf_stream.sink   push_i,
   hwpe_stream_intf_stream.source pop_o
@@ -40,6 +42,8 @@ module hwpe_stream_fifo_earlystall #(
   logic [ADDR_DEPTH-1:0] push_pointer_cs, push_pointer_ns;
   logic [DATA_WIDTH+DATA_WIDTH/8-1:0] fifo_registers[FIFO_DEPTH-1:0];
   integer       i;
+
+  assign flags_o.empty = (cs == EMPTY) ? 1'b1 : 1'b0;
 
   // state update circuit
   always_ff @(posedge clk_i, negedge rst_ni)

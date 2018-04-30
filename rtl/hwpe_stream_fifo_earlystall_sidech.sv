@@ -29,6 +29,8 @@ module hwpe_stream_fifo_earlystall_sidech #(
 
   hwpe_stream_intf_stream.sink   push_i,
   hwpe_stream_intf_stream.source pop_o,
+  
+  output flags_fifo_t            flags_o,
 
   input  logic [SIDECH_WIDTH-1:0] sidech_i,
   output logic [SIDECH_WIDTH-1:0] sidech_o
@@ -44,6 +46,8 @@ module hwpe_stream_fifo_earlystall_sidech #(
   logic [ADDR_DEPTH-1:0] push_pointer_cs, push_pointer_ns;
   logic [DATA_WIDTH+DATA_WIDTH/8+SIDECH_WIDTH-1:0] fifo_registers[FIFO_DEPTH-1:0];
   integer       i;
+
+  assign flags_o.empty = (cs == EMPTY) ? 1'b1 : 1'b0;
 
   // state update circuit
   always_ff @(posedge clk_i, negedge rst_ni)

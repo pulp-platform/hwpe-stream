@@ -15,9 +15,10 @@
 
 import hwpe_stream_package::*;
 
-module hwpe_stream_tcdm_fifo_load #(
+module hwpe_stream_tcdm_fifo_load_sidech #(
   parameter int unsigned FIFO_DEPTH = 8,
-  parameter int unsigned LATCH_FIFO = 0
+  parameter int unsigned LATCH_FIFO = 0,
+  parameter int unsigned SIDECH_WIDTH = 1
 )
 (
   input  logic                 clk_i,
@@ -29,7 +30,10 @@ module hwpe_stream_tcdm_fifo_load #(
   input  logic                 ready_i,
   
   hwpe_stream_intf_tcdm.slave  tcdm_slave,
-  hwpe_stream_intf_tcdm.master tcdm_master
+  hwpe_stream_intf_tcdm.master tcdm_master,
+
+  input  logic [SIDECH_WIDTH-1:0] sidech_i,
+  output logic [SIDECH_WIDTH-1:0] sidech_o
 );
 
   flags_fifo_t flags_incoming, flags_outgoing;
@@ -38,6 +42,8 @@ module hwpe_stream_tcdm_fifo_load #(
 
   logic        tcdm_master_r_valid_w, tcdm_master_r_valid_r;
   logic [31:0] tcdm_master_r_data_w, tcdm_master_r_data_r;
+
+  logic [SIDECH_WIDTH-1:0] sidech_internal;
 
   hwpe_stream_intf_stream #(
     .DATA_WIDTH ( 32 )
@@ -122,17 +128,20 @@ module hwpe_stream_tcdm_fifo_load #(
         tcdm_master_r_data_r <= tcdm_master_r_data_w;
   end
 
-  hwpe_stream_fifo_earlystall #(
-    .DATA_WIDTH ( 32         ),
-    .FIFO_DEPTH ( FIFO_DEPTH ),
-    .LATCH_FIFO ( LATCH_FIFO )
+  hwpe_stream_fifo_earlystall_sidech #(
+    .DATA_WIDTH   ( 32           ),
+    .FIFO_DEPTH   ( FIFO_DEPTH   ),
+    .LATCH_FIFO   ( LATCH_FIFO   ),
+    .SIDECH_WIDTH ( SIDECH_WIDTH )
   ) i_fifo_incoming (
-    .clk_i   ( clk_i                      ),
-    .rst_ni  ( rst_ni                     ),
-    .clear_i ( clear_i                    ),
-    .flags_o ( flags_incoming             ),
-    .push_i  ( stream_incoming_push.sink  ),
-    .pop_o   ( stream_incoming_pop.source )
+    .clk_i    ( clk_i                      ),
+    .rst_ni   ( rst_ni                     ),
+    .clear_i  ( clear_i                    ),
+    .flags_o  ( flags_incoming             ),
+    .push_i   ( stream_incoming_push.sink  ),
+    .pop_o    ( stream_incoming_pop.source ),
+    .sidech_i ( sidech_internal            ),
+    .sidech_o ( sidech_o                   )
   );
 
   // wrap tcdm outgoing ports into a stream
@@ -148,17 +157,20 @@ module hwpe_stream_tcdm_fifo_load #(
   assign tcdm_master.data = '0;
   assign stream_outgoing_pop.ready = tcdm_master.gnt; // if incoming_fifo_not_full=0, gnt is already 0, because req=0
 
-  hwpe_stream_fifo #(
-    .DATA_WIDTH ( 32         ),
-    .FIFO_DEPTH ( FIFO_DEPTH ),
-    .LATCH_FIFO ( LATCH_FIFO )
+  hwpe_stream_fifo_sidech #(
+    .DATA_WIDTH   ( 32           ),
+    .FIFO_DEPTH   ( FIFO_DEPTH   ),
+    .LATCH_FIFO   ( LATCH_FIFO   ),
+    .SIDECH_WIDTH ( SIDECH_WIDTH )
   ) i_fifo_outgoing (
-    .clk_i   ( clk_i                      ),
-    .rst_ni  ( rst_ni                     ),
-    .clear_i ( clear_i                    ),
-    .flags_o ( flags_outgoing             ),
-    .push_i  ( stream_outgoing_push.sink  ),
-    .pop_o   ( stream_outgoing_pop.source )
+    .clk_i    ( clk_i                      ),
+    .rst_ni   ( rst_ni                     ),
+    .clear_i  ( clear_i                    ),
+    .flags_o  ( flags_outgoing             ),
+    .push_i   ( stream_outgoing_push.sink  ),
+    .pop_o    ( stream_outgoing_pop.source ),
+    .sidech_i ( sidech_i                   ),
+    .sidech_o ( sidech_internal            )
   );
 
   assign flags_o.empty = flags_incoming.empty & flags_outgoing.empty;

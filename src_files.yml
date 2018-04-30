@@ -24,6 +24,7 @@ hwpe-stream:
     rtl/hwpe_stream_mux_static.sv,
     rtl/hwpe_stream_demux_static.sv,
     rtl/hwpe_stream_tcdm_fifo_load.sv,
+    rtl/hwpe_stream_tcdm_fifo_load_sidech.sv,
     rtl/hwpe_stream_tcdm_fifo_store.sv,
     rtl/hwpe_stream_tcdm_mux.sv,
     rtl/hwpe_stream_tcdm_mux_static.sv,
