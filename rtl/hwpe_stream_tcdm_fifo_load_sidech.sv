@@ -128,7 +128,7 @@ module hwpe_stream_tcdm_fifo_load_sidech #(
         tcdm_master_r_data_r <= tcdm_master_r_data_w;
   end
 
-  hwpe_stream_fifo_earlystall_sidech #(
+  hwpe_stream_fifo_sidech #(
     .DATA_WIDTH   ( 32           ),
     .FIFO_DEPTH   ( FIFO_DEPTH   ),
     .LATCH_FIFO   ( LATCH_FIFO   ),
