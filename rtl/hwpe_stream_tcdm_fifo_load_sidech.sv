@@ -44,6 +44,8 @@ module hwpe_stream_tcdm_fifo_load_sidech #(
   logic [31:0] tcdm_master_r_data_w, tcdm_master_r_data_r;
 
   logic [SIDECH_WIDTH-1:0] sidech_internal;
+  logic [SIDECH_WIDTH-1:0] sidech_internal_r;
+  logic [SIDECH_WIDTH-1:0] sidech_internal_s;
 
   hwpe_stream_intf_stream #(
     .DATA_WIDTH ( 32 )
@@ -140,7 +142,7 @@ module hwpe_stream_tcdm_fifo_load_sidech #(
     .flags_o  ( flags_incoming             ),
     .push_i   ( stream_incoming_push.sink  ),
     .pop_o    ( stream_incoming_pop.source ),
-    .sidech_i ( sidech_internal            ),
+    .sidech_i ( sidech_internal_s          ),
     .sidech_o ( sidech_o                   )
   );
 
@@ -172,6 +174,17 @@ module hwpe_stream_tcdm_fifo_load_sidech #(
     .sidech_i ( sidech_i                   ),
     .sidech_o ( sidech_internal            )
   );
+
+  always_ff @(posedge clk_i or negedge rst_ni)
+  begin
+    if(~rst_ni)
+      sidech_internal_r <= '0;
+    else if(clear_i)
+      sidech_internal_r <= '0;
+    else if(stream_outgoing_pop.valid)
+      sidech_internal_r <= sidech_internal;
+  end
+  assign sidech_internal_s = stream_outgoing_pop.valid ? sidech_internal : sidech_internal_r;
 
   assign flags_o.empty = flags_incoming.empty & flags_outgoing.empty;
 
