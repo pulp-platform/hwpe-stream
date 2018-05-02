@@ -38,6 +38,7 @@ package hwpe_stream_package;
     logic first;
     logic last;
     logic last_packet;
+    logic [15:0] line_length;
   } ctrl_realign_t;
 
   typedef struct packed {

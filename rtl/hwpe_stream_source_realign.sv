@@ -16,6 +16,8 @@
 import hwpe_stream_package::*;
 
 module hwpe_stream_source_realign #(
+  parameter int unsigned DECOUPLED  = 0, // set to 1 if used with a TCDM stream that does not respect the zero-latency assumption,
+                                         // e.g. it passes through a TCDM load FIFO.
   parameter int unsigned DATA_WIDTH = 32
 )
 (
@@ -42,6 +44,9 @@ module hwpe_stream_source_realign #(
 
   logic clk_gated;
 
+  logic int_first;
+  logic int_last;
+
   /* clock gating */
   cluster_clock_gating i_realign_gating (
     .clk_i     ( clk_i         ),
@@ -51,6 +56,67 @@ module hwpe_stream_source_realign #(
   );
 
   /* management of misaligned access */
+
+  // since the source address generation could be decoupled from the received stream
+  // (e.g. in case the load TCDM passes through FIFOs)
+  generate
+    if(DECOUPLED) begin : decoupled_flags_gen
+
+      logic [15:0] word_cnt, next_word_cnt;
+      logic [15:0] line_length_m1;
+
+      assign line_length_m1 = (ctrl_i.realign == 1'b0) ? ctrl_i.line_length - 1 :
+                                                         ctrl_i.line_length;
+
+      always_comb
+      begin
+        next_word_cnt = word_cnt;
+        if(stream_i.valid & stream_i.ready) begin
+          next_word_cnt = word_cnt + 1;
+        end
+        if((stream_i.valid & stream_i.ready) && word_cnt == line_length_m1) begin
+          next_word_cnt = '0;
+        end
+      end
+
+      always_ff @(posedge clk_i or negedge rst_ni)
+      begin
+        if(~rst_ni) begin
+          word_cnt <= '0;
+        end
+        else if(clear_i) begin
+          word_cnt <= '0;
+        end
+        else begin
+          word_cnt <= next_word_cnt;
+        end
+      end
+
+      // misalignment flags generation
+      always_comb
+      begin : int_last_comb
+        if(word_cnt < line_length_m1) begin
+          int_last <= '0;
+        end
+        else begin
+          int_last <= '1;
+        end
+      end
+      always_comb
+      begin : int_first_comb
+        int_first  = '0;
+        if(word_cnt == '0)
+          int_first = '1;
+      end
+
+    end
+    else begin : no_decoupled_flags_gen
+
+      assign int_first = ctrl_i.first;
+      assign int_last  = ctrl_i.last;
+      
+    end
+  endgenerate
 
   // save the strobes of the first misaligned transfer as a reference!
   // this implicitly assumes that all strobes result in a rotation - it
@@ -73,7 +139,7 @@ module hwpe_stream_source_realign #(
       strb_rotate_q <= '0;
       strb_rotate_inv_q <= '0;
     end
-    else if (~ctrl_i.last_packet & ctrl_i.first) begin
+    else if (~ctrl_i.last_packet & int_first) begin
       strb_rotate_q <= strb_rotate_d;
       strb_rotate_inv_q <= strb_rotate_inv_d;
     end
@@ -101,10 +167,10 @@ module hwpe_stream_source_realign #(
   end
   assign stream_o.valid = (~ctrl_i.realign)    ? stream_i.valid :
                           (ctrl_i.last_packet) ? stream_i.valid :
-                                                 stream_i.valid & ~ctrl_i.first & (ctrl_i.last | (|strb_i));
+                                                 stream_i.valid & ~int_first & (int_last | (|strb_i));
   assign stream_i.ready = (~ctrl_i.realign)    ? stream_o.ready :
                           (ctrl_i.last_packet) ? stream_o.valid & stream_o.ready :
-                                                 stream_o.ready | ctrl_i.first;
+                                                 stream_o.ready | int_first;
 
   assign stream_o.strb = '1;
 
