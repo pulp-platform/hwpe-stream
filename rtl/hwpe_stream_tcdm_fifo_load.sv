@@ -89,7 +89,7 @@ module hwpe_stream_tcdm_fifo_load #(
   assign incoming_fifo_not_full = stream_incoming_push.ready;
 
   assign tcdm_slave.r_data  = stream_incoming_pop.data;
-  assign tcdm_slave.r_valid = stream_incoming_pop.valid;
+  assign tcdm_slave.r_valid = stream_incoming_pop.valid & stream_incoming_pop.ready;
   assign stream_incoming_pop.ready = ready_i;
 
   // enforce protocol on incoming stream
