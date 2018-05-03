@@ -19,7 +19,8 @@ module hwpe_stream_source
 #(
   // Stream interface params
   parameter int unsigned DATA_WIDTH = 32,
-  parameter int unsigned NB_TCDM_PORTS = DATA_WIDTH/32
+  parameter int unsigned NB_TCDM_PORTS = DATA_WIDTH/32,
+  parameter int unsigned DECOUPLED = 0
 )
 (
   input logic clk_i,
@@ -59,6 +60,12 @@ module hwpe_stream_source
   );
 
   hwpe_stream_intf_stream #(
+    .DATA_WIDTH ( 32 )
+  ) fenced_streams [NB_TCDM_PORTS-1:0] (
+    .clk ( clk_i )
+  );
+
+  hwpe_stream_intf_stream #(
     .DATA_WIDTH ( DATA_WIDTH )
   ) misaligned_stream (
     .clk ( clk_i )
@@ -71,7 +78,7 @@ module hwpe_stream_source
     .clk_i    ( clk_i              ),
     .rst_ni   ( rst_ni             ),
     .clear_i  ( clear_i            ),
-    .stream_i ( split_streams      ),
+    .stream_i ( fenced_streams     ),
     .stream_o ( misaligned_stream  )
   );
 
@@ -93,6 +100,7 @@ module hwpe_stream_source
 
   // realign the merged stream
   hwpe_stream_source_realign #(
+    .DECOUPLED  ( DECOUPLED  ),
     .DATA_WIDTH ( DATA_WIDTH )
   ) i_realign (
     .clk_i      ( clk_i                                  ),
@@ -107,11 +115,44 @@ module hwpe_stream_source
 
   // tcdm ports binding
   generate
+
+    if(DECOUPLED) begin : fence_gen
+
+      hwpe_stream_fence #(
+        .NB_STREAMS ( NB_TCDM_PORTS ),
+        .DATA_WIDTH ( 32            )
+      ) i_fence (
+        .clk_i       ( clk_i          ),
+        .rst_ni      ( rst_ni         ),
+        .clear_i     ( clear_i        ),
+        .test_mode_i ( test_mode_i    ),
+        .push_i      ( split_streams  ),
+        .pop_o       ( fenced_streams )
+      );
+
+    end
+    else begin : no_fence_gen
+
+      for(genvar ii=0; ii<NB_TCDM_PORTS; ii++) begin : no_fence_binding
+        assign fenced_streams[ii].valid = split_streams[ii].valid;
+        assign fenced_streams[ii].data  = split_streams[ii].data;
+        assign fenced_streams[ii].strb  = split_streams[ii].strb;
+        assign split_streams[ii].ready = fenced_streams[ii].ready;
+      end
+
+    end
+
     for(genvar ii=0; ii<NB_TCDM_PORTS; ii++) begin: tcdm_binding
       logic        stream_valid_w, stream_valid_r;
       logic [31:0] stream_data_w,  stream_data_r;
 
-      assign tcdm[ii].req  = tcdm_int_req;
+      if(DECOUPLED) begin : decoupled_gen
+        assign tcdm[ii].req  = tcdm_int_req & split_streams[ii].ready;
+      end
+      else begin : no_decoupled_gen
+        assign tcdm[ii].req  = tcdm_int_req;
+      end
+      
       assign tcdm[ii].add  = gen_addr + ii*4;
       assign tcdm[ii].wen  = 1'b1;
       assign tcdm[ii].be   = 4'h0;

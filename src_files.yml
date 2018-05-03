@@ -16,6 +16,7 @@ hwpe-stream:
     rtl/hwpe_stream_fifo.sv,
     rtl/hwpe_stream_buffer.sv,
     rtl/hwpe_stream_merge.sv,
+    rtl/hwpe_stream_fence.sv,
     rtl/hwpe_stream_split.sv,
     rtl/hwpe_stream_sink.sv,
     rtl/hwpe_stream_source.sv,
