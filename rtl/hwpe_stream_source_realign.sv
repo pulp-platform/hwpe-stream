@@ -33,6 +33,8 @@ module hwpe_stream_source_realign #(
   hwpe_stream_intf_stream.source  stream_o
 );
 
+  logic [DATA_WIDTH/8-1:0] strb_last_r, strb_first_r, int_strb;
+
   logic unsigned [$clog2(DATA_WIDTH/8):0] strb_rotate_d;
   logic unsigned [$clog2(DATA_WIDTH/8):0] strb_rotate_inv_d;
   logic [DATA_WIDTH-1:0]   stream_data_q;
@@ -109,11 +111,33 @@ module hwpe_stream_source_realign #(
           int_first = '1;
       end
 
+      // record strobe and release it when appropriate
+      always_ff @(posedge clk_i or negedge rst_ni)
+      begin
+        if(~rst_ni) begin
+          strb_first_r <= '1;
+          strb_last_r  <= '1;
+        end
+        else if(clear_i) begin
+          strb_first_r <= '1;
+          strb_last_r  <= '1;
+        end
+        else begin
+          if(ctrl_i.first)
+            strb_first_r <= strb_i;
+          if(ctrl_i.last)
+            strb_last_r  <= strb_i;
+        end
+      end
+      assign int_strb = int_first ? (ctrl_i.first ? strb_i : strb_first_r) :
+                        int_last  ? (ctrl_i.last  ? strb_i : strb_last_r) : '1;
+
     end
     else begin : no_decoupled_flags_gen
 
       assign int_first = ctrl_i.first;
       assign int_last  = ctrl_i.last;
+      assign int_strb = strb_i;
       
     end
   endgenerate
@@ -125,7 +149,7 @@ module hwpe_stream_source_realign #(
   begin
     strb_rotate_d = '0;
     for (int i=0; i<DATA_WIDTH/8; i++)
-      strb_rotate_d += ($clog2(DATA_WIDTH/8))'(strb_i[i]);
+      strb_rotate_d += ($clog2(DATA_WIDTH/8))'(int_strb[i]);
   end
   assign strb_rotate_inv_d = {($clog2(DATA_WIDTH/8)){1'b1}} - strb_rotate_d + 1;;
 
@@ -167,7 +191,7 @@ module hwpe_stream_source_realign #(
   end
   assign stream_o.valid = (~ctrl_i.realign)    ? stream_i.valid :
                           (ctrl_i.last_packet) ? stream_i.valid :
-                                                 stream_i.valid & ~int_first & (int_last | (|strb_i));
+                                                 stream_i.valid & ~int_first & (int_last | (|int_strb));
   assign stream_i.ready = (~ctrl_i.realign)    ? stream_o.ready :
                           (ctrl_i.last_packet) ? stream_o.valid & stream_o.ready :
                                                  stream_o.ready | int_first;
