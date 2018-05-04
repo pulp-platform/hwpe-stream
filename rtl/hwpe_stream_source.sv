@@ -56,6 +56,8 @@ module hwpe_stream_source
 
   logic [15:0] overall_cnt, next_overall_cnt;
 
+  logic [NB_TCDM_PORTS-1:0] fence_hs;
+
   hwpe_stream_intf_stream #(
     .DATA_WIDTH ( 32 )
   ) split_streams [NB_TCDM_PORTS-1:0] (
@@ -133,8 +135,24 @@ module hwpe_stream_source
         .pop_o       ( fenced_streams )
       );
 
+      always_ff @(posedge clk_i or negedge rst_ni)
+      begin
+        if (~rst_ni)
+          fence_hs <= '0;
+        else if (clear_i)
+          fence_hs <= '0;
+        else for(int i=0; i<NB_TCDM_PORTS; i++) begin
+          if (tcdm_int_req & tcdm_int_gnt)
+            fence_hs[i] <= '0;
+          else if (tcdm_int_req & ~tcdm_int_gnt)
+            fence_hs[i] <= fence_hs[i] | tcdm_int_req & tcdm_split_gnt[i];
+        end
+      end
+
     end
     else begin : no_fence_gen
+
+      assign fence_hs = '0;
 
       for(genvar ii=0; ii<NB_TCDM_PORTS; ii++) begin : no_fence_binding
         assign fenced_streams[ii].valid = split_streams[ii].valid;
@@ -150,14 +168,14 @@ module hwpe_stream_source
       logic [31:0] stream_data_w,  stream_data_r;
 
       assign tcdm_fifo_ready_o[ii] = split_streams[ii].ready;
-      assign tcdm[ii].req  = tcdm_int_req;
+      assign tcdm[ii].req  = tcdm_int_req & ~fence_hs[ii];
       assign tcdm[ii].add  = gen_addr + ii*4;
       assign tcdm[ii].wen  = 1'b1;
       assign tcdm[ii].be   = 4'h0;
       assign tcdm[ii].data = '0; 
-      assign tcdm_split_gnt[ii] = tcdm[ii].gnt;
+      assign tcdm_split_gnt[ii] = tcdm[ii].gnt | fence_hs[ii];
       assign split_streams[ii].strb  = '1;
-      assign split_streams[ii].data  = (stream_valid_w) ? stream_data_w : stream_data_r;
+      assign split_streams[ii].data  = stream_valid_w ? stream_data_w : stream_data_r;
       assign split_streams[ii].valid = stream_valid_w | stream_valid_r;
 
       assign stream_data_w  = tcdm[ii].r_data;
