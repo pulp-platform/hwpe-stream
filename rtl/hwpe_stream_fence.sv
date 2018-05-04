@@ -76,8 +76,8 @@ module hwpe_stream_fence #(
     out_valid = 1'b0;
     if(&(in_valid | fence_state))
       out_valid = 1'b1;
-    else for(int i=0; i<NB_STREAMS; i++)
-      next_fence_state[i] = fence_state | in_valid[i];
+    else
+      next_fence_state = fence_state | in_valid;
   end
 
   always_ff @(posedge clk_i or negedge rst_ni)

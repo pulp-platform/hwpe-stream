@@ -28,8 +28,9 @@ module hwpe_stream_source
   input logic test_mode_i,
   input logic clear_i,
 
-  hwpe_stream_intf_tcdm.master   tcdm [NB_TCDM_PORTS-1:0],
-  hwpe_stream_intf_stream.source stream,
+  hwpe_stream_intf_tcdm.master     tcdm [NB_TCDM_PORTS-1:0],
+  hwpe_stream_intf_stream.source   stream,
+  output logic [NB_TCDM_PORTS-1:0] tcdm_fifo_ready_o, // leave unconnected if DECOUPLED = 0
 
   // control plane
   input  ctrl_sourcesink_t   ctrl_i,
@@ -52,6 +53,8 @@ module hwpe_stream_source
   logic valid_int;
   logic [DATA_WIDTH -1:0] data_packed;
   logic [DATA_WIDTH -1:0] data_int;
+
+  logic [15:0] overall_cnt, next_overall_cnt;
 
   hwpe_stream_intf_stream #(
     .DATA_WIDTH ( 32 )
@@ -146,13 +149,8 @@ module hwpe_stream_source
       logic        stream_valid_w, stream_valid_r;
       logic [31:0] stream_data_w,  stream_data_r;
 
-      if(DECOUPLED) begin : decoupled_gen
-        assign tcdm[ii].req  = tcdm_int_req & split_streams[ii].ready;
-      end
-      else begin : no_decoupled_gen
-        assign tcdm[ii].req  = tcdm_int_req;
-      end
-      
+      assign tcdm_fifo_ready_o[ii] = split_streams[ii].ready;
+      assign tcdm[ii].req  = tcdm_int_req;
       assign tcdm[ii].add  = gen_addr + ii*4;
       assign tcdm[ii].wen  = 1'b1;
       assign tcdm[ii].be   = 4'h0;
@@ -225,56 +223,152 @@ module hwpe_stream_source
       flags_o.done <= done;
   end
 
-  always_comb
-  begin : fsm_comb
-    tcdm_int_req  = 1'b0;
-    flags_o.ready_start = 1'b0;
-    done = 1'b0;
-    ns         = cs;
-    address_gen_en  = 1'b0;
-    address_gen_clr = clear_i;
-    case(cs)
-      STREAM_IDLE: begin
-        flags_o.ready_start = 1'b1;
-        if(ctrl_i.req_start) begin
-          ns = STREAM_WORKING;
-        end
-        else begin
-          ns = STREAM_IDLE;
-        end
-        address_gen_en = 1'b0;
-      end //~STREAM_IDLE
-      STREAM_WORKING: begin
-        if(stream.ready) begin
-          tcdm_int_req = 1'b1;
-          if(tcdm_int_gnt)
-            address_gen_en = 1'b1;
-          else
+  generate
+
+    if(DECOUPLED) begin : decoupled_ctrl_gen      
+
+      always_comb
+      begin : fsm_comb
+        tcdm_int_req  = 1'b0;
+        flags_o.ready_start = 1'b0;
+        done = 1'b0;
+        ns = cs;
+        address_gen_en  = 1'b0;
+        address_gen_clr = clear_i;
+        case(cs)
+          STREAM_IDLE: begin
+            flags_o.ready_start = 1'b1;
+            if(ctrl_i.req_start) begin
+              ns = STREAM_WORKING;
+            end
+            else begin
+              ns = STREAM_IDLE;
+            end
             address_gen_en = 1'b0;
-        end
-        else begin
-          tcdm_int_req = 1'b0;
-          address_gen_en = 1'b0;
-        end
-        if(tcdm_int_gnt) begin
-          if(flags_o.addressgen_flags.in_progress | (~tcdm_int_gnt & tcdm_int_req)) begin
-            ns = STREAM_WORKING;
           end
-          else begin
-            done = 1'b1;
-            ns   = STREAM_IDLE;
-            address_gen_clr = 1'b1;
+          STREAM_WORKING: begin
+            if(stream.ready) begin
+              tcdm_int_req = 1'b1;
+              if(tcdm_int_gnt)
+                address_gen_en = 1'b1;
+              else
+                address_gen_en = 1'b0;
+            end
+            else begin
+              tcdm_int_req = 1'b0;
+              address_gen_en = 1'b0;
+            end
+            if(tcdm_int_gnt) begin
+              if(flags_o.addressgen_flags.in_progress == 1'b1) begin
+                ns = STREAM_WORKING;
+              end
+              else if(overall_cnt != '0) begin
+                ns = STREAM_DONE;
+              end
+            end
+            else begin
+              ns = STREAM_WORKING;
+            end
           end
-        end
-        else begin
-          ns = STREAM_WORKING;
-        end
-      end//~SOURCE
-      default: begin
-        ns = STREAM_IDLE;
-        address_gen_en = 1'b0;
+          STREAM_DONE: begin
+            ns = STREAM_DONE;
+            if(overall_cnt == '0) begin
+              ns = STREAM_IDLE;
+              done = 1'b1;
+              address_gen_clr = 1'b1;
+            end
+            address_gen_en = 1'b0;
+          end
+          default: begin
+            ns = STREAM_IDLE;
+            address_gen_en = 1'b0;
+          end
+        endcase
       end
-    endcase
-  end
+
+      always_comb
+      begin
+        next_overall_cnt = overall_cnt;
+        if(cs == STREAM_IDLE)
+          next_overall_cnt = '0;
+        else if(stream.valid & stream.ready) begin
+          next_overall_cnt = overall_cnt + 1;
+        end
+        if((stream.valid & stream.ready) && overall_cnt == ctrl_i.addressgen_ctrl.trans_size-1) begin
+          next_overall_cnt = '0;
+        end
+      end
+
+      always_ff @(posedge clk_i or negedge rst_ni)
+      begin
+        if(~rst_ni) begin
+          overall_cnt <= '0;
+        end
+        else if(clear_i) begin
+          overall_cnt <= '0;
+        end
+        else begin
+          overall_cnt <= next_overall_cnt;
+        end
+      end
+
+    end
+    else begin : no_decoupled_ctrl_gen
+
+      always_comb
+      begin : fsm_comb
+        tcdm_int_req  = 1'b0;
+        flags_o.ready_start = 1'b0;
+        done = 1'b0;
+        ns         = cs;
+        address_gen_en  = 1'b0;
+        address_gen_clr = clear_i;
+        case(cs)
+          STREAM_IDLE: begin
+            flags_o.ready_start = 1'b1;
+            if(ctrl_i.req_start) begin
+              ns = STREAM_WORKING;
+            end
+            else begin
+              ns = STREAM_IDLE;
+            end
+            address_gen_en = 1'b0;
+          end
+          STREAM_WORKING: begin
+            if(stream.ready) begin
+              tcdm_int_req = 1'b1;
+              if(tcdm_int_gnt)
+                address_gen_en = 1'b1;
+              else
+                address_gen_en = 1'b0;
+            end
+            else begin
+              tcdm_int_req = 1'b0;
+              address_gen_en = 1'b0;
+            end
+            if(tcdm_int_gnt) begin
+              if(flags_o.addressgen_flags.in_progress == 1'b1) begin
+                ns = STREAM_WORKING;
+              end
+              else begin
+                done = 1'b1;
+                ns   = STREAM_IDLE;
+                address_gen_clr = 1'b1;
+              end
+            end
+            else begin
+              ns = STREAM_WORKING;
+            end
+          end//~SOURCE
+          default: begin
+            ns = STREAM_IDLE;
+            address_gen_en = 1'b0;
+          end
+        endcase
+      end
+
+    end
+
+  endgenerate
 
 endmodule // hwpe_stream_source
