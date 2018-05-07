@@ -48,6 +48,7 @@ module hwpe_stream_source_realign #(
 
   logic int_first;
   logic int_last;
+  logic int_last_packet;
 
   /* clock gating */
   cluster_clock_gating i_realign_gating (
@@ -66,9 +67,10 @@ module hwpe_stream_source_realign #(
 
       logic [15:0] word_cnt, next_word_cnt;
       logic [15:0] line_length_m1;
+      logic r_last_packet;
 
       assign line_length_m1 = (ctrl_i.realign == 1'b0) ? ctrl_i.line_length - 1 :
-                                                         ctrl_i.line_length;
+                                                         ctrl_i.line_length;                                        
 
       always_comb
       begin
@@ -110,6 +112,20 @@ module hwpe_stream_source_realign #(
         if(word_cnt == '0)
           int_first = '1;
       end
+      always_ff @(posedge clk_i or negedge rst_ni)
+      begin : int_last_packet_seq
+        if(~rst_ni)
+          r_last_packet <= '0;
+        else if (clear_i)
+          r_last_packet <= '0;
+        else begin
+          if (ctrl_i.last_packet)
+            r_last_packet <= 1'b1;
+          else if (r_last_packet & int_last & stream_o.valid & stream_o.ready)
+            r_last_packet <= 1'b0;
+        end
+      end
+      assign int_last_packet = int_last & r_last_packet;
 
       // record strobe and release it when appropriate
       always_ff @(posedge clk_i or negedge rst_ni)
@@ -163,7 +179,7 @@ module hwpe_stream_source_realign #(
       strb_rotate_q <= '0;
       strb_rotate_inv_q <= '0;
     end
-    else if (~ctrl_i.last_packet & int_first) begin
+    else if (~int_last_packet & int_first) begin
       strb_rotate_q <= strb_rotate_d;
       strb_rotate_inv_q <= strb_rotate_inv_d;
     end
@@ -178,7 +194,7 @@ module hwpe_stream_source_realign #(
     else if (clear_i)
       stream_data_q <= '0;
     // last packet is kept "forever"
-    else if (~ctrl_i.last_packet & stream_i.valid & stream_i.ready)
+    else if (~int_last_packet & stream_i.valid & stream_i.ready)
       stream_data_q <= stream_i.data;
   end
   always_comb
@@ -189,12 +205,12 @@ module hwpe_stream_source_realign #(
         stream_o.data = stream_i.data << strb_rotate_q_shifted | stream_data_q >> strb_rotate_inv_q_shifted;
     end
   end
-  assign stream_o.valid = (~ctrl_i.realign)    ? stream_i.valid :
-                          (ctrl_i.last_packet) ? stream_i.valid :
-                                                 stream_i.valid & ~int_first & (int_last | (|int_strb));
-  assign stream_i.ready = (~ctrl_i.realign)    ? stream_o.ready :
-                          (ctrl_i.last_packet) ? stream_o.valid & stream_o.ready :
-                                                 stream_o.ready | int_first;
+  assign stream_o.valid = (~ctrl_i.realign) ? stream_i.valid :
+                          (int_last_packet) ? stream_i.valid :
+                                              stream_i.valid & ~int_first & (int_last | (|int_strb));
+  assign stream_i.ready = (~ctrl_i.realign) ? stream_o.ready :
+                          (int_last_packet) ? stream_o.valid & stream_o.ready :
+                                              stream_o.ready | int_first;
 
   assign stream_o.strb = '1;
 
