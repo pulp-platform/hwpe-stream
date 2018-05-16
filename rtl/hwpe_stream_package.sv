@@ -63,6 +63,7 @@ package hwpe_stream_package;
     logic              ready_start;
     logic              done;
     flags_addressgen_t addressgen_flags;
+    logic              ready_fifo;
   } flags_sourcesink_t;
 
   typedef enum {
