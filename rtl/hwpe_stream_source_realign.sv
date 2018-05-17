@@ -209,7 +209,7 @@ module hwpe_stream_source_realign #(
                           (int_last_packet) ? stream_i.valid :
                                               stream_i.valid & ~int_first & (int_last | (|int_strb));
   assign stream_i.ready = (~ctrl_i.realign) ? stream_o.ready :
-                          (int_last_packet) ? stream_o.valid & stream_o.ready :
+                          (int_last_packet) ? stream_o.ready :
                                               stream_o.ready | int_first;
 
   assign stream_o.strb = '1;
