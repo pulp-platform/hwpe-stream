@@ -76,6 +76,12 @@ module hwpe_stream_source
     .clk ( clk_i )
   );
 
+  hwpe_stream_intf_stream #(
+    .DATA_WIDTH ( DATA_WIDTH )
+  ) misaligned_fifo_stream (
+    .clk ( clk_i )
+  );
+
   hwpe_stream_merge #(
     .DATA_WIDTH_IN ( 32            ),
     .NB_IN_STREAMS ( NB_TCDM_PORTS )
@@ -85,6 +91,19 @@ module hwpe_stream_source
     .clear_i  ( clear_i            ),
     .stream_i ( fenced_streams     ),
     .stream_o ( misaligned_stream  )
+  );
+
+  hwpe_stream_fifo #(
+    .DATA_WIDTH ( DATA_WIDTH ),
+    .FIFO_DEPTH ( 2          ),
+    .LATCH_FIFO ( 1          )
+  ) i_misaligned_fifo (
+    .clk_i   ( clk_i                  ),
+    .rst_ni  ( rst_ni                 ),
+    .clear_i ( clear_i                ),
+    .flags_o (                        ),
+    .push_i  ( misaligned_stream      ),
+    .pop_o   ( misaligned_fifo_stream )
   );
 
   // generate addresses
@@ -114,7 +133,7 @@ module hwpe_stream_source
     .clear_i    ( clear_i                                ),
     .ctrl_i     ( flags_o.addressgen_flags.realign_flags ),
     .strb_i     ( gen_strb                               ),
-    .stream_i   ( misaligned_stream                      ),
+    .stream_i   ( misaligned_fifo_stream                 ),
     .stream_o   ( stream                                 )
   );
 
