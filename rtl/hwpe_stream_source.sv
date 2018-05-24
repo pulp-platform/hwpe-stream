@@ -93,19 +93,6 @@ module hwpe_stream_source
     .stream_o ( misaligned_stream  )
   );
 
-  hwpe_stream_fifo #(
-    .DATA_WIDTH ( DATA_WIDTH ),
-    .FIFO_DEPTH ( 2          ),
-    .LATCH_FIFO ( 1          )
-  ) i_misaligned_fifo (
-    .clk_i   ( clk_i                  ),
-    .rst_ni  ( rst_ni                 ),
-    .clear_i ( clear_i                ),
-    .flags_o (                        ),
-    .push_i  ( misaligned_stream      ),
-    .pop_o   ( misaligned_fifo_stream )
-  );
-
   // generate addresses
   hwpe_stream_addressgen #(
     .STEP         ( NB_TCDM_PORTS*4            ),
@@ -141,6 +128,19 @@ module hwpe_stream_source
   generate
 
     if(DECOUPLED) begin : fence_gen
+
+      hwpe_stream_fifo #(
+        .DATA_WIDTH ( DATA_WIDTH ),
+        .FIFO_DEPTH ( 2          ),
+        .LATCH_FIFO ( 1          )
+      ) i_misaligned_fifo (
+        .clk_i   ( clk_i                  ),
+        .rst_ni  ( rst_ni                 ),
+        .clear_i ( clear_i                ),
+        .flags_o (                        ),
+        .push_i  ( misaligned_stream      ),
+        .pop_o   ( misaligned_fifo_stream )
+      );
 
       hwpe_stream_fence #(
         .NB_STREAMS ( NB_TCDM_PORTS ),
@@ -179,6 +179,11 @@ module hwpe_stream_source
         assign fenced_streams[ii].strb  = split_streams[ii].strb;
         assign split_streams[ii].ready = fenced_streams[ii].ready;
       end
+
+      assign misaligned_fifo_stream.valid = misaligned_stream.valid;
+      assign misaligned_fifo_stream.data  = misaligned_stream.data;
+      assign misaligned_fifo_stream.strb  = misaligned_stream.strb;
+      assign misaligned_stream.ready = misaligned_fifo_stream.ready;
 
     end
 
