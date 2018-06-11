@@ -30,6 +30,7 @@ package hwpe_stream_package;
     logic [15:0] feat_roll;
     logic        loop_outer;
     logic        realign_type;
+    logic [7:0]  line_length_remainder; // in bytes
   } ctrl_addressgen_t;
 
   typedef struct packed {

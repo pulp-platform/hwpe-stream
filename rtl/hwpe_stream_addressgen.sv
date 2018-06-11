@@ -287,19 +287,6 @@ module hwpe_stream_addressgen
   end
 
   assign gen_addr_o = { gen_addr_int[31:2] , 2'b0 };
-  
-  always_comb
-  begin
-    gen_strb_int = '1;
-    if(misalignment) begin
-      if (misalignment_first) begin
-        gen_strb_int =   gen_strb_int << gen_addr_int[$clog2(STEP)-1:0];
-      end
-      if (misalignment_last) begin
-        gen_strb_int = ~(gen_strb_int << gen_addr_int[$clog2(STEP)-1:0]);
-      end
-    end
-  end
 
   assign flags.realign_flags.enable  = misalignment;
   assign flags.realign_flags.realign = misalignment;
@@ -313,12 +300,55 @@ module hwpe_stream_addressgen
     flags_addressgen_t aux;
 
     if(REALIGN_TYPE == HWPE_STREAM_REALIGN_SOURCE) begin
+      
+      always_comb
+      begin
+        gen_strb_int = '1;
+        if(misalignment) begin
+          if (misalignment_first) begin
+            gen_strb_int =   gen_strb_int << gen_addr_int[$clog2(STEP)-1:0];
+          end
+          if (misalignment_last) begin
+            gen_strb_int = ~(gen_strb_int << gen_addr_int[$clog2(STEP)-1:0]);
+          end
+        end
+      end
+
       assign flags_o.realign_flags = aux.realign_flags;
       assign gen_strb_o = gen_strb_r;
+
     end
     else begin
+
+      logic [STEP-1:0] line_length_remainder_strb;
+
+      for(genvar ii=0; ii<STEP; ii++) begin : line_length_remainder_strb_gen
+        always_comb
+        begin
+          if (ctrl_i.line_length_remainder >= ii)
+            line_length_remainder_strb[ii] = 1'b1;
+          else
+            line_length_remainder_strb[ii] = 1'b0;
+        end
+      end
+      
+      always_comb
+      begin
+        gen_strb_int = '1;
+        if(misalignment) begin
+          if (misalignment_first) begin
+            gen_strb_int =   gen_strb_int << gen_addr_int[$clog2(STEP)-1:0];
+          end
+        end
+        if (misalignment_last & (misalignment | (ctrl_i.line_length_remainder != '0))) begin
+          gen_strb_int = line_length_remainder_strb;
+          gen_strb_int = ~(gen_strb_int << gen_addr_int[$clog2(STEP)-1:0]);
+        end
+      end
+
       assign flags_o.realign_flags = flags.realign_flags;
       assign gen_strb_o = gen_strb_int;
+
     end
     assign flags_o.word_update = aux.word_update;
     assign flags_o.line_update = aux.line_update;
