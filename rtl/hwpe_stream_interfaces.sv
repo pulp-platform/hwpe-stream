@@ -13,6 +13,10 @@
  * specific language governing permissions and limitations under the License.
  */
 
+`ifndef HWPE_ASSERT_SEVERITY
+`define HWPE_ASSERT_SEVERITY $fatal
+`endif
+
 interface hwpe_stream_intf_tcdm (
   input logic clk
 );
@@ -54,7 +58,7 @@ interface hwpe_stream_intf_tcdm (
   endproperty;
 
   HWPE_TCDM_R_VALID: assert property(hwpe_tcdm_r_valid_rule)
-    else $fatal("ASSERTION FAILURE HWPE_TCDM_R_VALID", 1);
+    else `HWPE_ASSERT_SEVERITY("ASSERTION FAILURE HWPE_TCDM_R_VALID", 1);
 `endif
 
 endinterface // hwpe_stream_intf_tcdm
@@ -104,10 +108,10 @@ interface hwpe_stream_intf_stream (
   endproperty;
 
   HWPE_STREAM_VALUE_CHANGE:   assert property(hwpe_stream_value_change_rule)
-    else $fatal("ASSERTION FAILURE: HWPE_STREAM_VALUE_CHANGE", 1);
+    else `HWPE_ASSERT_SEVERITY("ASSERTION FAILURE: HWPE_STREAM_VALUE_CHANGE", 1);
 
   HWPE_STREAM_VALID_DEASSERT: assert property(hwpe_stream_valid_deassert_rule)
-    else $fatal("ASSERTION FAILURE HWPE_STREAM_VALID_DEASSERT", 1);
+    else `HWPE_ASSERT_SEVERITY("ASSERTION FAILURE HWPE_STREAM_VALID_DEASSERT", 1);
 `endif
 
 endinterface // hwpe_stream_intf_stream
