@@ -14,7 +14,7 @@
  */
 
 `ifndef HWPE_ASSERT_SEVERITY
-`define HWPE_ASSERT_SEVERITY $fatal
+`define HWPE_ASSERT_SEVERITY $warning
 `endif
 
 interface hwpe_stream_intf_tcdm (
