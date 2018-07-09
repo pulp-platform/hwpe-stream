@@ -19,7 +19,8 @@ import hwpe_stream_package::*;
 module hwpe_stream_fifo #(
   parameter int unsigned DATA_WIDTH = 32,
   parameter int unsigned FIFO_DEPTH = 8,
-  parameter int unsigned LATCH_FIFO = 0
+  parameter int unsigned LATCH_FIFO = 0,
+  parameter int unsigned LATCH_FIFO_TEST_WRAP = 0
 )
 (
   input  logic                   clk_i,
@@ -184,22 +185,47 @@ module hwpe_stream_fifo #(
       assign data_out_int = fifo_registers[pop_pointer_cs];
 
     end
-    else begin : fifo_latch_gen
+    else if(LATCH_FIFO_TEST_WRAP == 0) begin : fifo_latch_gen
 
       assign data_in_int = { push_i.data, push_i.strb };
 
       hwpe_stream_fifo_scm #(
-        .ADDR_WIDTH(ADDR_DEPTH               ),
-        .DATA_WIDTH(DATA_WIDTH + DATA_WIDTH/8)
+        .ADDR_WIDTH ( ADDR_DEPTH                ),
+        .DATA_WIDTH ( DATA_WIDTH + DATA_WIDTH/8 )
+      ) i_fifo_latch (
+        .clk         ( clk_i                       ),
+        .rst_n       ( rst_ni                      ),
+        .ReadEnable  ( 1'b1                        ),
+        .ReadAddr    ( pop_pointer_ns              ),
+        .ReadData    ( data_out_int                ),
+        .WriteEnable ( push_i.ready & push_i.valid ),
+        .WriteAddr   ( push_pointer_cs             ),
+        .WriteData   ( data_in_int                 )
+      );
+
+    end
+    else begin : fifo_latch_test_wrap_gen
+
+      assign data_in_int = { push_i.data, push_i.strb };
+
+      hwpe_stream_fifo_scm_test_wrap #(
+        .ADDR_WIDTH ( ADDR_DEPTH                ),
+        .DATA_WIDTH ( DATA_WIDTH + DATA_WIDTH/8 )
       ) i_fifo_latch (
         .clk ( clk_i ),
-        .rst_n       (rst_ni                      ),
-        .ReadEnable  (1'b1                        ),
-        .ReadAddr    (pop_pointer_ns              ),
-        .ReadData    (data_out_int                ),
-        .WriteEnable (push_i.ready & push_i.valid ),
-        .WriteAddr   (push_pointer_cs             ),
-        .WriteData   (data_in_int                 )
+        .rst_n       ( rst_ni                      ),
+        .ReadEnable  ( 1'b1                        ),
+        .ReadAddr    ( pop_pointer_ns              ),
+        .ReadData    ( data_out_int                ),
+        .WriteEnable ( push_i.ready & push_i.valid ),
+        .WriteAddr   ( push_pointer_cs             ),
+        .WriteData   ( data_in_int                 ),
+        .BIST        ( 1'b0                        ), // BIST ports, connect me
+        .CSN_T       (                             ), // BIST ports, connect me
+        .WEN_T       (                             ), // BIST ports, connect me
+        .A_T         (                             ), // BIST ports, connect me
+        .D_T         (                             ), // BIST ports, connect me
+        .Q_T         (                             )  // BIST ports, connect me
       );
 
     end

@@ -12,6 +12,7 @@ hwpe-stream:
     rtl/hwpe_stream_fifo_earlystall_sidech.sv,
     rtl/hwpe_stream_fifo_earlystall.sv,
     rtl/hwpe_stream_fifo_scm.sv,
+    rtl/hwpe_stream_fifo_scm_test_wrap.sv,
     rtl/hwpe_stream_fifo_sidech.sv,
     rtl/hwpe_stream_fifo.sv,
     rtl/hwpe_stream_buffer.sv,

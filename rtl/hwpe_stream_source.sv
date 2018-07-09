@@ -20,7 +20,8 @@ module hwpe_stream_source
   // Stream interface params
   parameter int unsigned DATA_WIDTH = 32,
   parameter int unsigned NB_TCDM_PORTS = DATA_WIDTH/32,
-  parameter int unsigned DECOUPLED = 0
+  parameter int unsigned DECOUPLED = 0,
+  parameter int unsigned LATCH_FIFO  = 0
 )
 (
   input logic clk_i,
@@ -132,7 +133,7 @@ module hwpe_stream_source
       hwpe_stream_fifo #(
         .DATA_WIDTH ( DATA_WIDTH ),
         .FIFO_DEPTH ( 2          ),
-        .LATCH_FIFO ( 1          )
+        .LATCH_FIFO ( LATCH_FIFO )
       ) i_misaligned_fifo (
         .clk_i   ( clk_i                  ),
         .rst_ni  ( rst_ni                 ),
