@@ -23,6 +23,7 @@ hwpe-stream:
     rtl/hwpe_stream_source.sv,
     rtl/hwpe_stream_sink_realign.sv,
     rtl/hwpe_stream_source_realign.sv,
+    rtl/hwpe_stream_strbgen.sv,
     rtl/hwpe_stream_mux_static.sv,
     rtl/hwpe_stream_demux_static.sv,
     rtl/hwpe_stream_tcdm_fifo_load.sv,
