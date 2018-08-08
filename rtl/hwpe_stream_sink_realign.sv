@@ -100,7 +100,7 @@ module hwpe_stream_sink_realign #(
       stream_strb_q <= '0;
     else if (clear_i)
       stream_strb_q <= '0;
-    else if (ctrl_i.first) begin
+    else if (stream_i.valid & stream_i.ready & ctrl_i.first) begin
       stream_strb_q <= stream_i.strb;
     end
   end
@@ -111,7 +111,7 @@ module hwpe_stream_sink_realign #(
       stream_strb_latest_q <= '0;
     else if (clear_i)
       stream_strb_latest_q <= '0;
-    else begin
+    else if (stream_i.valid & stream_i.ready) begin
       stream_strb_latest_q <= stream_i.strb;
     end
   end
@@ -166,7 +166,7 @@ module hwpe_stream_sink_realign #(
       else begin
         int_data =  (stream_i.data << strb_rotate_q_shifted) | (stream_data_q >> strb_rotate_inv_shifted);
         if(ctrl_i.last)
-          int_strb = (stream_strb_q >> strb_rotate_inv_q) & (stream_strb_latest_q >> strb_rotate_inv_q);
+          int_strb = ((stream_strb_q & stream_strb_latest_q) >> strb_rotate_inv_q);
         else
           int_strb = ((stream_i.strb << strb_rotate_q) & strb_q | (stream_strb_q >> strb_rotate_inv_q));
       end
