@@ -41,6 +41,7 @@ module hwpe_stream_sink_realign #(
   logic unsigned [$clog2(DATA_WIDTH/8)+3:0] strb_rotate_inv_shifted;
   logic [DATA_WIDTH-1:0]   stream_data_q;
   logic [DATA_WIDTH/8-1:0] stream_strb_q;
+  logic [DATA_WIDTH/8-1:0] stream_strb_latest_q;
 
   logic [DATA_WIDTH-1:0] int_data;
   logic [DATA_WIDTH-1:0] int_data_q;
@@ -107,6 +108,17 @@ module hwpe_stream_sink_realign #(
   always_ff @(posedge clk_i or negedge rst_ni)
   begin
     if(~rst_ni)
+      stream_strb_latest_q <= '0;
+    else if (clear_i)
+      stream_strb_latest_q <= '0;
+    else begin
+      stream_strb_latest_q <= stream_i.strb;
+    end
+  end
+
+  always_ff @(posedge clk_i or negedge rst_ni)
+  begin
+    if(~rst_ni)
       strb_q <= '0;
     else if (clear_i)
       strb_q <= '0;
@@ -154,7 +166,7 @@ module hwpe_stream_sink_realign #(
       else begin
         int_data =  (stream_i.data << strb_rotate_q_shifted) | (stream_data_q >> strb_rotate_inv_shifted);
         if(ctrl_i.last)
-          int_strb = stream_strb_q >> strb_rotate_inv_q;
+          int_strb = (stream_strb_q >> strb_rotate_inv_q) & (stream_strb_latest_q >> strb_rotate_inv_q);
         else
           int_strb = ((stream_i.strb << strb_rotate_q) & strb_q | (stream_strb_q >> strb_rotate_inv_q));
       end
