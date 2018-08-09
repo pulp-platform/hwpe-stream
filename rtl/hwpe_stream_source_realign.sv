@@ -18,7 +18,8 @@ import hwpe_stream_package::*;
 module hwpe_stream_source_realign #(
   parameter int unsigned DECOUPLED  = 0, // set to 1 if used with a TCDM stream that does not respect the zero-latency assumption,
                                          // e.g. it passes through a TCDM load FIFO.
-  parameter int unsigned DATA_WIDTH = 32
+  parameter int unsigned DATA_WIDTH = 32,
+  parameter int unsigned STRB_FIFO_DEPTH = 4
 )
 (
   input  logic                    clk_i,
@@ -33,7 +34,11 @@ module hwpe_stream_source_realign #(
   hwpe_stream_intf_stream.source  stream_o
 );
 
-  logic [DATA_WIDTH/8-1:0] strb_last_r, strb_first_r, int_strb;
+  logic [STRB_FIFO_DEPTH-1:0][DATA_WIDTH/8-1:0] strb_last_r, strb_first_r;
+  logic [DATA_WIDTH/8-1:0] int_strb;
+
+  logic [$clog2(STRB_FIFO_DEPTH)-1:0] strb_first_cnt;
+  logic [$clog2(STRB_FIFO_DEPTH)-1:0] strb_last_cnt;
 
   logic unsigned [$clog2(DATA_WIDTH/8):0] strb_rotate_d;
   logic unsigned [$clog2(DATA_WIDTH/8):0] strb_rotate_inv_d;
@@ -132,21 +137,75 @@ module hwpe_stream_source_realign #(
       begin
         if(~rst_ni) begin
           strb_first_r <= '1;
-          strb_last_r  <= '1;
+          strb_first_cnt <= '0;
         end
-        else if(clear_i) begin
-          strb_first_r <= '1;
-          strb_last_r  <= '1;
+        else if (clear_i) begin
+          strb_first_r <= '0;
+          strb_first_cnt <= '0;
         end
         else begin
-          if(ctrl_i.first)
-            strb_first_r <= strb_i;
-          if(ctrl_i.last)
-            strb_last_r  <= strb_i;
+          if(ctrl_i.strb_valid & ctrl_i.first & stream_i.valid & stream_i.ready & int_first) begin
+            strb_first_cnt <= strb_first_cnt;
+            strb_first_r[0] <= strb_i;
+            for(int i=0; i<STRB_FIFO_DEPTH; i++)
+              strb_first_r[i+1] <= strb_first_r[i];
+          end
+          else if(ctrl_i.strb_valid & ctrl_i.first) begin
+            strb_first_cnt <= strb_first_cnt + 1;
+            strb_first_r[0] <= strb_i;
+            for(int i=0; i<STRB_FIFO_DEPTH; i++)
+              strb_first_r[i+1] <= strb_first_r[i];
+          end
+          else if(stream_i.valid & stream_i.ready & int_first) begin
+            strb_first_cnt <= strb_first_cnt - 1;
+          end
         end
       end
-      assign int_strb = int_first ? (ctrl_i.first ? strb_i : strb_first_r) :
-                        int_last  ? (ctrl_i.last  ? strb_i : strb_last_r) : '1;
+
+      always_ff @(posedge clk_i or negedge rst_ni)
+      begin
+        if(~rst_ni) begin
+          strb_last_r  <= '1;
+          strb_last_cnt  <= '0;
+        end
+        else if (clear_i) begin
+          strb_last_r  <= '1;
+          strb_last_cnt  <= '0;
+        end
+        else begin
+          if(ctrl_i.strb_valid & ctrl_i.last & stream_i.valid & stream_i.ready & int_last) begin
+            strb_last_r[0] <= strb_i;
+            for(int i=0; i<STRB_FIFO_DEPTH; i++)
+              strb_last_r[i+1] <= strb_last_r[i];
+          end
+          else if(ctrl_i.strb_valid & ctrl_i.last) begin
+            strb_last_cnt <= strb_last_cnt + 1;
+            strb_last_r[0] <= strb_i;
+            for(int i=0; i<STRB_FIFO_DEPTH; i++)
+              strb_last_r[i+1] <= strb_last_r[i];
+          end
+          else if(stream_i.valid & stream_i.ready & int_last) begin
+            strb_last_cnt <= strb_last_cnt - 1;
+          end
+        end
+      end
+
+      always_comb
+      begin
+        int_strb = '1;
+        if(int_first) begin
+          if(ctrl_i.first & (strb_first_cnt == '0))
+            int_strb = strb_i;
+          else
+            int_strb = strb_first_r[strb_first_cnt];
+        end
+        else if(int_last) begin
+          if(ctrl_i.last & (strb_last_cnt == '0))
+            int_strb = strb_i;
+          else
+            int_strb = strb_last_r[strb_last_cnt];
+        end
+      end
 
     end
     else begin : no_decoupled_flags_gen

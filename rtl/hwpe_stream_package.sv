@@ -35,6 +35,7 @@ package hwpe_stream_package;
 
   typedef struct packed {
     logic enable;
+    logic strb_valid;
     logic realign;
     logic first;
     logic last;

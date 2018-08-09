@@ -312,12 +312,37 @@ module hwpe_stream_addressgen
     // auxiliary variable used to avoid conflicts between always_ff & assign
     flags_addressgen_t aux;
 
+    logic strb_valid_r0, strb_valid_r1;
+    always_ff @(posedge clk_i or negedge rst_ni)
+    begin
+      if(~rst_ni) begin
+        strb_valid_r0 <= '0;
+        strb_valid_r1 <= '0;
+      end
+      else if(clear_i) begin
+        strb_valid_r0 <= '0;
+        strb_valid_r1 <= '0;
+      end
+      else begin
+        strb_valid_r0 <= enable_int;
+        strb_valid_r1 <= strb_valid_r0;
+      end
+    end
+
     if(REALIGN_TYPE == HWPE_STREAM_REALIGN_SOURCE) begin
-      assign flags_o.realign_flags = aux.realign_flags;
+      always_comb
+      begin
+        flags_o.realign_flags = aux.realign_flags;
+        flags_o.realign_flags.strb_valid = strb_valid_r1;
+      end
       assign gen_strb_o = gen_strb_r;
     end
     else begin
-      assign flags_o.realign_flags = flags.realign_flags;
+      always_comb
+      begin
+        flags_o.realign_flags = flags.realign_flags;
+        flags_o.realign_flags.strb_valid = strb_valid_r0;
+      end
       assign gen_strb_o = gen_strb_int;
     end
     assign flags_o.word_update = aux.word_update;
