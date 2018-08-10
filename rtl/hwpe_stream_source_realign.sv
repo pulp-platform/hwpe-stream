@@ -147,14 +147,14 @@ module hwpe_stream_source_realign #(
           if(ctrl_i.strb_valid & ctrl_i.first & stream_i.valid & stream_i.ready & int_first) begin
             strb_first_cnt <= strb_first_cnt;
             strb_first_r[0] <= strb_i;
-            for(int i=0; i<STRB_FIFO_DEPTH; i++)
-              strb_first_r[i+1] <= strb_first_r[i];
+            for(int i=1; i<STRB_FIFO_DEPTH; i++)
+              strb_first_r[i] <= strb_first_r[i-1];
           end
           else if(ctrl_i.strb_valid & ctrl_i.first) begin
             strb_first_cnt <= strb_first_cnt + 1;
             strb_first_r[0] <= strb_i;
-            for(int i=0; i<STRB_FIFO_DEPTH; i++)
-              strb_first_r[i+1] <= strb_first_r[i];
+            for(int i=1; i<STRB_FIFO_DEPTH; i++)
+              strb_first_r[i] <= strb_first_r[i-1];
           end
           else if(stream_i.valid & stream_i.ready & int_first) begin
             strb_first_cnt <= strb_first_cnt - 1;
@@ -175,14 +175,14 @@ module hwpe_stream_source_realign #(
         else begin
           if(ctrl_i.strb_valid & ctrl_i.last & stream_i.valid & stream_i.ready & int_last) begin
             strb_last_r[0] <= strb_i;
-            for(int i=0; i<STRB_FIFO_DEPTH; i++)
-              strb_last_r[i+1] <= strb_last_r[i];
+            for(int i=1; i<STRB_FIFO_DEPTH; i++)
+              strb_last_r[i] <= strb_last_r[i-1];
           end
           else if(ctrl_i.strb_valid & ctrl_i.last) begin
             strb_last_cnt <= strb_last_cnt + 1;
             strb_last_r[0] <= strb_i;
-            for(int i=0; i<STRB_FIFO_DEPTH; i++)
-              strb_last_r[i+1] <= strb_last_r[i];
+            for(int i=1; i<STRB_FIFO_DEPTH; i++)
+              strb_last_r[i] <= strb_last_r[i-1];
           end
           else if(stream_i.valid & stream_i.ready & int_last) begin
             strb_last_cnt <= strb_last_cnt - 1;
