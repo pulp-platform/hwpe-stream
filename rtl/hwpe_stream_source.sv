@@ -301,7 +301,7 @@ module hwpe_stream_source
               tcdm_int_req = 1'b0;
               address_gen_en = 1'b0;
             end
-            if(tcdm_int_gnt) begin
+            if(tcdm_int_req & tcdm_int_gnt) begin
               if(flags_o.addressgen_flags.in_progress == 1'b1) begin
                 ns = STREAM_WORKING;
               end
