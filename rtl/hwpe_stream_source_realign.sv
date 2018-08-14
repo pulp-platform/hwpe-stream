@@ -226,7 +226,7 @@ module hwpe_stream_source_realign #(
     for (int i=0; i<DATA_WIDTH/8; i++)
       strb_rotate_d += ($clog2(DATA_WIDTH/8))'(int_strb[i]);
   end
-  assign strb_rotate_inv_d = {($clog2(DATA_WIDTH/8)){1'b1}} - strb_rotate_d + 1;;
+  assign strb_rotate_inv_d = {($clog2(DATA_WIDTH/8)){1'b1}} - strb_rotate_d + 1;
 
   always_ff @(posedge clk_gated or negedge rst_ni)
   begin
