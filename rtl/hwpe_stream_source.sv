@@ -56,6 +56,7 @@ module hwpe_stream_source
   logic [DATA_WIDTH -1:0] data_int;
 
   logic [15:0] overall_cnt, next_overall_cnt;
+  logic overall_none;
 
   logic [NB_TCDM_PORTS-1:0] fence_hs;
 
@@ -305,7 +306,7 @@ module hwpe_stream_source
               if(flags_o.addressgen_flags.in_progress == 1'b1) begin
                 ns = STREAM_WORKING;
               end
-              else if(overall_cnt != '0) begin
+              else if(overall_none == 1'b1 || overall_cnt != '0) begin
                 ns = STREAM_DONE;
               end
             end
@@ -315,7 +316,7 @@ module hwpe_stream_source
           end
           STREAM_DONE: begin
             ns = STREAM_DONE;
-            if(overall_cnt == '0) begin
+            if(overall_none == 1'b0 && overall_cnt == '0) begin
               ns = STREAM_IDLE;
               done = 1'b1;
               address_gen_clr = 1'b1;
@@ -352,6 +353,22 @@ module hwpe_stream_source
         end
         else begin
           overall_cnt <= next_overall_cnt;
+        end
+      end
+
+      always_ff @(posedge clk_i or negedge rst_ni)
+      begin
+        if(~rst_ni) begin
+          overall_none <= 1'b1;
+        end
+        else if(clear_i) begin
+          overall_none <= 1'b1;
+        end
+        else if(cs == STREAM_IDLE) begin
+          overall_none <= 1'b1;
+        end
+        else if(stream.valid & stream.ready) begin
+          overall_none <= 1'b0;
         end
       end
 
