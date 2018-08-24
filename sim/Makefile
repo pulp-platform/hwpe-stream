@@ -14,11 +14,15 @@ sim-sink-realign:
 	vsim -lib work vopt_sink_realign +notimingchecks
 sim-source-realign:
 	vsim -lib work vopt_source_realign +notimingchecks
+sim-source-realign-decoupled:
+	vsim -lib work vopt_source_realign_decoupled +notimingchecks
 
 opt-sink-realign:
 	$(mkfile_path)/vsimulate/rtl_vopt_sink_realign.tcl
 opt-source-realign:
 	$(mkfile_path)/vsimulate/rtl_vopt_source_realign.tcl
+opt-source-realign-decoupled:
+	$(mkfile_path)/vsimulate/rtl_vopt_source_realign_decoupled.tcl
 
 build:
 	@make --no-print-directory -f $(mkfile_path)/vcompile/rtl.mk build

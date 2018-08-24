@@ -1,5 +1,5 @@
 /* 
- * tb_hwpe_stream_source_realign.sv
+ * tb_hwpe_stream_source_realign_decoupled.sv
  * Francesco Conti <fconti@iis.ee.ethz.ch>
  *
  * Copyright (C) 2014-2018 ETH Zurich, University of Bologna
@@ -20,12 +20,13 @@ timeprecision 1ps;
 
 import hwpe_stream_package::*;
 
-module tb_hwpe_stream_source_realign;
+module tb_hwpe_stream_source_realign_decoupled;
 
   // parameters
-  parameter PROB_STALL = 0.2;
+  parameter PROB_STALL = 0.0;
   parameter DS = 16;
-  parameter DECOUPLED = 0;
+  parameter DECOUPLED = 1;
+  parameter STRB_FIFO_DEPTH = 4;
 
   // global signals
   logic clk_i  = '0;
@@ -57,6 +58,11 @@ module tb_hwpe_stream_source_realign;
   hwpe_stream_intf_stream #(
     .DATA_WIDTH(DS)
   ) in (
+    .clk ( clk_i )
+  );
+  hwpe_stream_intf_stream #(
+    .DATA_WIDTH(DS)
+  ) fifo (
     .clk ( clk_i )
   );
   hwpe_stream_intf_stream #(
@@ -111,17 +117,29 @@ module tb_hwpe_stream_source_realign;
   );
 
   hwpe_stream_source_realign #(
-    .DATA_WIDTH ( DS        ),
-    .DECOUPLED  ( DECOUPLED )
+    .DATA_WIDTH      ( DS        ),
+    .DECOUPLED       ( DECOUPLED ),
+    .STRB_FIFO_DEPTH ( 4         )
   ) i_source_realign (
-    .clk_i       ( clk_i   ),
-    .rst_ni      ( rst_ni  ),
-    .clear_i     ( 1'b0    ),
-    .test_mode_i ( 1'b0    ),
-    .ctrl_i      ( ctrl    ),
-    .strb_i      ( in.strb ),
-    .stream_i    ( in      ),
-    .stream_o    ( out     )
+    .clk_i       ( clk_i    ),
+    .rst_ni      ( rst_ni   ),
+    .clear_i     ( 1'b0     ),
+    .test_mode_i ( 1'b0     ),
+    .ctrl_i      ( ctrl     ),
+    .strb_i      ( in.strb  ),
+    .stream_i    ( fifo     ),
+    .stream_o    ( out      )
+  );
+
+  hwpe_stream_fifo #(
+    .DATA_WIDTH ( DS              ),
+    .FIFO_DEPTH ( STRB_FIFO_DEPTH )
+  ) i_fifo (
+    .clk_i   ( clk_i  ),
+    .rst_ni  ( rst_ni ),
+    .clear_i ( 1'b0   ),
+    .push_i  ( in     ),
+    .pop_o   ( fifo   )
   );
 
   tb_hwpe_stream_receiver #(
@@ -181,10 +199,11 @@ module tb_hwpe_stream_source_realign;
     force_invalid    <= #TA '0;
     force_valid      <= #TA '0;
     new_rotation     <= #TA '0;
+
     if(enable) begin
       if(counter == 0) begin
         rotation = $urandom_range(0, DS/8-1);
-        length   = $urandom_range(2, DS);
+        length   = $urandom_range(2, 16);
         force_invalid <= #TA 1'b1;
         #(TCP*2)
         enable_reservoir <= #TA 1'b1;
@@ -224,7 +243,6 @@ module tb_hwpe_stream_source_realign;
         if(rotation != 0)
           ctrl.realign <= #TA 1'b1;
         if(out.valid & out.ready) begin
-          // real_last <= #TA 1'b1;
           counter += 1;
           force_invalid <= #TA 1'b1;
         end

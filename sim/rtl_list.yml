@@ -6,10 +6,8 @@
 
 rtl:
   path: ..
-  domain: [cluster]
 
-common_cells:
-  path: ../../common_cells
-  domain: [cluster]
+tech_cells_generic:
+  path: ../../tech_cells_generic
 
 

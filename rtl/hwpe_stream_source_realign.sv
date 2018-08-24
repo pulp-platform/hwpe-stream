@@ -83,6 +83,9 @@ module hwpe_stream_source_realign #(
         if(stream_i.valid & stream_i.ready) begin
           next_word_cnt = word_cnt + 1;
         end
+        if((stream_i.valid & stream_i.ready) && word_cnt >0 && line_length_m1 == 2) begin
+          next_word_cnt = '0;
+        end
         if((stream_i.valid & stream_i.ready) && word_cnt == line_length_m1) begin
           next_word_cnt = '0;
         end
@@ -104,11 +107,12 @@ module hwpe_stream_source_realign #(
       // misalignment flags generation
       always_comb
       begin : int_last_comb
-        if(word_cnt < line_length_m1) begin
-          int_last <= '0;
+        int_last = '1;
+        if((word_cnt < line_length_m1) && (line_length_m1 == 2)) begin
+          int_last = ctrl_i.last;
         end
-        else begin
-          int_last <= '1;
+        else if(word_cnt < line_length_m1) begin
+          int_last = '0;
         end
       end
       always_comb
@@ -212,6 +216,7 @@ module hwpe_stream_source_realign #(
 
       assign int_first = ctrl_i.first;
       assign int_last  = ctrl_i.last;
+      assign int_last_packet = ctrl_i.last_packet;
       assign int_strb = strb_i;
       
     end

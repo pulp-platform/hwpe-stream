@@ -52,5 +52,6 @@ tb_hwpe_stream_local:
   files: [
     tb/tb_hwpe_stream_sink_realign.sv,
     tb/tb_hwpe_stream_source_realign.sv,
+    tb/tb_hwpe_stream_source_realign_decoupled.sv,
   ]
 
