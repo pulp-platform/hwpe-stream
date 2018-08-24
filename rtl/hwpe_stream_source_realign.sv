@@ -36,6 +36,7 @@ module hwpe_stream_source_realign #(
 );
 
   logic [STRB_FIFO_DEPTH-1:0][DATA_WIDTH/8-1:0] strb_last_r, strb_first_r;
+  logic [STRB_FIFO_DEPTH-1:0] last_packet_r;
   logic [DATA_WIDTH/8-1:0] int_strb;
 
   logic [$clog2(STRB_FIFO_DEPTH):0] strb_first_cnt;
@@ -116,20 +117,6 @@ module hwpe_stream_source_realign #(
         if(word_cnt == '0)
           int_first = '1;
       end
-      always_ff @(posedge clk_i or negedge rst_ni)
-      begin : int_last_packet_seq
-        if(~rst_ni)
-          r_last_packet <= '0;
-        else if (clear_i)
-          r_last_packet <= '0;
-        else begin
-          if (ctrl_i.last_packet)
-            r_last_packet <= 1'b1;
-          else if (r_last_packet & int_last & stream_o.valid & stream_o.ready)
-            r_last_packet <= 1'b0;
-        end
-      end
-      assign int_last_packet = int_last & r_last_packet;
 
       // record strobe and release it when appropriate
       always_ff @(posedge clk_i or negedge rst_ni)
@@ -166,22 +153,30 @@ module hwpe_stream_source_realign #(
         if(~rst_ni) begin
           strb_last_r  <= '1;
           strb_last_cnt  <= '0;
+          last_packet_r <= '0;
         end
         else if (clear_i) begin
           strb_last_r  <= '1;
           strb_last_cnt  <= '0;
+          last_packet_r <= '0;
         end
         else begin
           if(ctrl_i.strb_valid & ctrl_i.last & stream_i.valid & stream_i.ready & int_last) begin
             strb_last_r[0] <= strb_i;
-            for(int i=1; i<STRB_FIFO_DEPTH; i++)
+            last_packet_r[0] <= ctrl_i.last_packet;
+            for(int i=1; i<STRB_FIFO_DEPTH; i++) begin
               strb_last_r[i] <= strb_last_r[i-1];
+              last_packet_r[i] <= last_packet_r[i-1];
+            end
           end
           else if(ctrl_i.strb_valid & ctrl_i.last) begin
             strb_last_cnt <= strb_last_cnt + 1;
             strb_last_r[0] <= strb_i;
-            for(int i=1; i<STRB_FIFO_DEPTH; i++)
+            last_packet_r[0] <= ctrl_i.last_packet;
+            for(int i=1; i<STRB_FIFO_DEPTH; i++) begin
               strb_last_r[i] <= strb_last_r[i-1];
+              last_packet_r[i] <= last_packet_r[i-1];
+            end
           end
           else if(stream_i.valid & stream_i.ready & int_last) begin
             strb_last_cnt <= strb_last_cnt - 1;
@@ -192,6 +187,7 @@ module hwpe_stream_source_realign #(
       always_comb
       begin
         int_strb = '1;
+        int_last_packet = '0;
         if(int_first) begin
           if(ctrl_i.first & (strb_first_cnt == '0))
             int_strb = strb_i;
@@ -199,10 +195,14 @@ module hwpe_stream_source_realign #(
             int_strb = strb_first_r[strb_first_cnt-1];
         end
         else if(int_last) begin
-          if(ctrl_i.last & (strb_last_cnt == '0))
+          if(ctrl_i.last & (strb_last_cnt == '0)) begin
             int_strb = strb_i;
-          else
+            int_last_packet = ctrl_i.last_packet;
+          end
+          else begin
             int_strb = strb_last_r[strb_last_cnt-1];
+            int_last_packet = last_packet_r[strb_last_cnt-1];
+          end
         end
       end
 
