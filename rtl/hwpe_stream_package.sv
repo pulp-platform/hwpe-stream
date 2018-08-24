@@ -44,6 +44,10 @@ package hwpe_stream_package;
   } ctrl_realign_t;
 
   typedef struct packed {
+    logic decoupled_stall;
+  } flags_realign_t;
+
+  typedef struct packed {
     ctrl_realign_t realign_flags;
     logic word_update;
     logic line_update;

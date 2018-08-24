@@ -23,10 +23,13 @@ import hwpe_stream_package::*;
 module tb_hwpe_stream_source_realign_decoupled;
 
   // parameters
-  parameter PROB_STALL = 0.0;
-  parameter DS = 16;
+  parameter PROB_STALL_SOURCE = 0.05;
+  parameter PROB_STALL_SINK   = 0.05;
+  parameter DS = 32;
   parameter DECOUPLED = 1;
-  parameter STRB_FIFO_DEPTH = 4;
+  parameter STRB_FIFO_DEPTH = 64;
+
+  parameter LENGTH = 1;
 
   // global signals
   logic clk_i  = '0;
@@ -36,11 +39,13 @@ module tb_hwpe_stream_source_realign_decoupled;
   logic randomize = '0;
   logic enable = '0;
   logic enable_reservoir = '0;
-  ctrl_realign_t ctrl, masked_ctrl;
+  ctrl_realign_t ctrl, delayed_ctrl;
+  flags_realign_t flags;
   logic [DS/8-1:0] strb;
   logic force_invalid;
   logic force_valid;
   logic real_last;
+  logic real_last_out;
 
   int unsigned rotation = 0;
   logic new_rotation;
@@ -48,13 +53,13 @@ module tb_hwpe_stream_source_realign_decoupled;
   int unsigned verif_ctr_out;
   logic [DS*DS-1:0] verif_vector_in;
   logic [DS*DS-1:0] verif_vector_out;
-  logic [DS*DS-1:0] gold_vector_in;
   logic [DS*DS-1:0] next_verif_vector_in;
-  logic [DS*DS-1:0] gold_vector_out;
   logic [DS*DS-1:0] next_verif_vector_out;
-  logic gold_valid_in;
-  logic gold_valid_out;
+  
+  logic[DS/8-1:0] gen_strb;
 
+  logic clk_delayed, clk_assert;
+  
   hwpe_stream_intf_stream #(
     .DATA_WIDTH(DS)
   ) in (
@@ -98,65 +103,66 @@ module tb_hwpe_stream_source_realign_decoupled;
     #(TCP-TT);
   endtask
 
+  always_ff @(posedge clk_i or negedge rst_ni)
+  begin
+    if(~rst_ni)
+      delayed_ctrl <= '0;
+    else
+      delayed_ctrl <= ctrl;
+  end
+
   tb_hwpe_stream_reservoir #(
     .REALIGN_TYPE ( HWPE_STREAM_REALIGN_SOURCE ),
     .DATA_WIDTH   ( DS                         ),
-    .PROB_STALL   ( PROB_STALL                 ),
+    .PROB_STALL   ( PROB_STALL_SOURCE          ),
     .TCP          ( TCP                        ),
     .TA           ( TA                         ),
     .TT           ( TT                         )
   ) i_reservoir (
-    .clk_i           ( clk_i                                                   ),
-    .randomize_i     ( randomize                                               ),
-    .rotation_i      ( rotation                                                ),
-    .new_rotation_i  ( new_rotation                                            ),
-    .force_invalid_i ( force_invalid                                           ),
-    .force_valid_i   ( force_valid                                             ),
-    .enable_i        ( enable & (enable_reservoir | ctrl.realign) & ~real_last ),
-    .data_o          ( in                                                      )
+    .clk_i           ( clk_i                                      ),
+    .randomize_i     ( randomize                                  ),
+    .rotation_i      ( rotation                                   ),
+    .new_rotation_i  ( new_rotation                               ),
+    .force_invalid_i ( force_invalid                              ),
+    .force_valid_i   ( force_valid                                ),
+    .enable_i        ( enable & (enable_reservoir | ctrl.realign) ),
+    .data_o          ( in                                         )
   );
 
   hwpe_stream_source_realign #(
-    .DATA_WIDTH      ( DS        ),
-    .DECOUPLED       ( DECOUPLED ),
-    .STRB_FIFO_DEPTH ( 4         )
+    .DATA_WIDTH      ( DS              ),
+    .DECOUPLED       ( DECOUPLED       ),
+    .STRB_FIFO_DEPTH ( STRB_FIFO_DEPTH )
   ) i_source_realign (
-    .clk_i       ( clk_i    ),
-    .rst_ni      ( rst_ni   ),
-    .clear_i     ( 1'b0     ),
-    .test_mode_i ( 1'b0     ),
-    .ctrl_i      ( ctrl     ),
-    .strb_i      ( in.strb  ),
-    .stream_i    ( fifo     ),
-    .stream_o    ( out      )
-  );
-
-  hwpe_stream_fifo #(
-    .DATA_WIDTH ( DS              ),
-    .FIFO_DEPTH ( STRB_FIFO_DEPTH )
-  ) i_fifo (
-    .clk_i   ( clk_i  ),
-    .rst_ni  ( rst_ni ),
-    .clear_i ( 1'b0   ),
-    .push_i  ( in     ),
-    .pop_o   ( fifo   )
+    .clk_i       ( clk_i        ),
+    .rst_ni      ( rst_ni       ),
+    .clear_i     ( 1'b0         ),
+    .test_mode_i ( 1'b0         ),
+    .ctrl_i      ( delayed_ctrl ),
+    .flags_o     ( flags        ),
+    .strb_i      ( gen_strb     ),
+    .stream_i    ( in           ),
+    .stream_o    ( out          )
   );
 
   tb_hwpe_stream_receiver #(
-    .DATA_WIDTH ( DS         ),
-    .PROB_STALL ( PROB_STALL ),
-    .TCP        ( TCP        ),
-    .TA         ( TA         ),
-    .TT         ( TT         )
+    .DATA_WIDTH ( DS              ),
+    .PROB_STALL ( PROB_STALL_SINK ),
+    .TCP        ( TCP             ),
+    .TA         ( TA              ),
+    .TT         ( TT              )
   ) i_receiver (
     .clk_i         ( clk_i  ),
-    .force_ready_i ( 1'b1   ),
+    .force_ready_i ( 1'b0   ),
     .enable_i      ( enable ),
     .data_i        ( out    )
   );
 
   initial begin
     #(20*TCP);
+
+    force_invalid <= #TA '1;
+    force_valid   <= #TA '0;
 
     // Reset phase.
     rst_ni <= #TA 1'b0;
@@ -174,6 +180,10 @@ module tb_hwpe_stream_source_realign_decoupled;
     cycle();
     randomize <= #TA 1'b0;
 
+    force_invalid <= #TA '0;
+    force_valid   <= #TA '0;
+    enable_reservoir <= #TA 1'b1;
+
     cycle();
     cycle();
     enable <= 1'b1;
@@ -186,83 +196,140 @@ module tb_hwpe_stream_source_realign_decoupled;
 
   int counter = 0;
   int unsigned length   = 1;
+  logic last_flag;
+
+  int rotation_queue[$];
+  int length_queue[$];
+  int in_length_queue[$];
+  logic [DS/8-1:0] strb_queue[$];
 
   always
   begin
-    ctrl.enable      <= #TA '1;
-    ctrl.realign     <= #TA '0;
-    ctrl.first       <= #TA '0;
-    ctrl.last        <= #TA '0;
-    ctrl.strb_valid  <= #TA '0;
-    // real_last        <= #TA '0;
-    ctrl.last_packet <= #TA '0;
-    force_invalid    <= #TA '0;
-    force_valid      <= #TA '0;
-    new_rotation     <= #TA '0;
-
-    if(enable) begin
-      if(counter == 0) begin
-        rotation = $urandom_range(0, DS/8-1);
-        length   = $urandom_range(2, 16);
-        force_invalid <= #TA 1'b1;
-        #(TCP*2)
-        enable_reservoir <= #TA 1'b1;
-        force_invalid <= #TA 1'b0;
-        // the first transaction is always valid in this tb!
-        force_valid   <= #TA 1'b1;
-        new_rotation  <= #TA 1'b1;
-        #(TCP);
-        force_valid <= #TA 1'b0;
-        new_rotation <= #TA 1'b0;
-        ctrl.first  <= #TA 1'b1;
-        ctrl.strb_valid <= #TA 1'b0;
-        ctrl.line_length <= #TA length + 1;
-        if(rotation != 0) begin
-          ctrl.realign <= #TA 1'b1;
-        end
-        counter += 1;
-      end
-      else if(counter < length-1) begin
-        ctrl.strb_valid <= #TA 1'b0;
-        if(rotation != 0)
-          ctrl.realign <= #TA 1'b1;
-        if(out.valid & out.ready)
-          counter += 1;
-      end
-      else if(counter == length-1) begin
-        ctrl.strb_valid <= #TA 1'b0;
-        if(rotation != 0)
-          ctrl.realign <= #TA 1'b1;
-        if(out.valid & out.ready)
-          counter += 1;
-        force_valid <= #TA 1'b1;
-      end
-      else if(counter == length) begin
-        ctrl.strb_valid <= #TA 1'b1;
-        ctrl.last   <= #TA 1'b1;
-        if(rotation != 0)
-          ctrl.realign <= #TA 1'b1;
-        if(out.valid & out.ready) begin
-          counter += 1;
-          force_invalid <= #TA 1'b1;
-        end
-      end
-      else begin
-        ctrl.realign <= #TA 1'b0;
-        counter = 0;
-        force_invalid <= #TA 1'b1;
-      end
+    if(~rst_ni) begin
+      while(rotation_queue.size() > 0)
+        rotation_queue.delete(0);
+      while(length_queue.size() > 0)
+        length_queue.delete(0);
+    end
+    if(rotation_queue.size() < 16) begin
+      rotation_queue.push_front($urandom_range(0, DS/8-1));
+      length_queue.push_front(LENGTH);
     end
     #(TCP);
   end
-  assign real_last = ctrl.last; // & out.valid & out.ready;
+
+  always_ff @(posedge clk_i or negedge rst_ni)
+  begin
+    if(~rst_ni) begin
+      counter <= 0;
+      ctrl <= '0;
+      gen_strb <= '0;
+      while(strb_queue.size() > 0)
+        strb_queue.delete(0);
+      while(in_length_queue.size() > 0)
+        in_length_queue.delete(0);
+    end
+    else begin
+      automatic int rotation = rotation_queue.pop_back();
+      automatic int length = length_queue.pop_back();
+      ctrl.enable <= 1'b1;
+      if((counter == 0) && (rotation_queue.size() > 0) && flags.decoupled_stall == '0) begin
+        ctrl.first       <= 1'b1;
+        ctrl.last        <= 1'b0;
+        ctrl.strb_valid  <= 1'b1;
+        ctrl.line_length <= length;
+        if(rotation != 0) begin
+          ctrl.realign <= 1'b1;
+          gen_strb <= '1 << rotation;
+          strb_queue.push_front('1 << rotation);
+          in_length_queue.push_front(length+1);
+        end
+        else begin
+          ctrl.realign <= 1'b1;
+          gen_strb <= '1;
+          strb_queue.push_front('1);
+          in_length_queue.push_front(length+1);
+        end
+        counter <= counter + 1;
+      end
+      else if(counter > 0 && counter < ctrl.line_length-1) begin
+        counter <= counter + 1;
+        ctrl.first       <= 1'b0;
+        ctrl.last        <= 1'b0;
+        ctrl.strb_valid  <= 1'b0;
+      end
+      else if(counter > 0 && counter == ctrl.line_length-1) begin
+        counter <= 0;
+        ctrl.first       <= 1'b0;
+        ctrl.last        <= 1'b1;
+        ctrl.strb_valid  <= 1'b1;
+      end
+      else begin
+        counter <= 0;
+        ctrl.first       <= 1'b0;
+        ctrl.last        <= 1'b0;
+        ctrl.strb_valid  <= 1'b0;
+      end
+    end
+  end
+
+  int in_counter;
+  int in_length;
+  logic [DS/8-1:0] in_strb;
+  logic in_first;
+  logic in_last;
+  logic in_strb_valid;
+  logic in_realign;
+  always_ff @(posedge clk_i or negedge rst_ni)
+  begin
+    if(~rst_ni) begin
+      in_counter <= 0;
+    end
+    else begin
+      if(in.valid & in.ready) begin
+        if(in_counter == in_length-1) begin
+          in_counter <= 0;
+        end
+        else begin
+          in_counter <= in_counter + 1;
+        end
+      end
+    end
+  end
+
+  always_ff @(posedge clk_i or negedge rst_ni)
+  begin
+    if(~rst_ni) begin
+      in_length <= '0;
+      in_strb <= '1;
+    end
+    else begin
+      if(in_length == '0) begin
+        if(in_length_queue.size() > 0) begin
+          in_length <= in_length_queue.pop_back();
+          in_strb <= strb_queue.pop_back();
+        end
+      end
+      if(in.valid & in.ready & in_counter == in_length-1) begin
+        in_length <= in_length_queue.pop_back();
+        in_strb <= strb_queue.pop_back();
+      end
+    end
+  end
+
+  assign in_first = (in_counter == 0) & in.valid & in.ready;
+  assign in_last = (in_counter == in_length-1) & in.valid & in.ready;
+  assign in_strb_valid = in_first | in_last;
+  assign in_realign = in_length > LENGTH ? 1'b1 : 1'b0;
+  assign real_last = (in_counter == in_length-1) & in.valid & in.ready;
+  assign real_last_out = enable & i_source_realign.int_last & out.valid & out.ready;
 
   int unsigned strb_popcount;
   always_comb
   begin
     strb_popcount = 0;
     for(int i=0; i<DS/8; i++)
-      strb_popcount += (in.strb[i] == 1'b1) ? 1 : 0;
+      strb_popcount += (in_strb[i] == 1'b1) ? 1 : 0;
   end
 
   logic [DS/8-1:0] save_strb;
@@ -272,21 +339,53 @@ module tb_hwpe_stream_source_realign_decoupled;
       save_strb <= '0;
     end
     else if(in.valid & in.ready) begin
-      if(ctrl.first) begin
-        save_strb <= ~in.strb;
+      if(in_first) begin
+        save_strb <= ~in_strb;
       end
     end
   end
 
+
+  logic [DS*DS-1:0] in_data_queue  [$];
+  logic [DS*DS-1:0] out_data_queue [$];
+
+  // sample monitored streams
+  always_ff @(posedge clk_i or negedge rst_ni)
+  begin
+    if(~rst_ni) begin
+      while(in_data_queue.size() > 0)
+        in_data_queue.delete(0);
+      while(out_data_queue.size() > 0)
+        out_data_queue.delete(0);
+    end
+    else begin
+      if(in.valid & in.ready & real_last) begin
+        in_data_queue.push_front(next_verif_vector_in);
+      end
+      if(out.valid & out.ready & real_last_out) begin
+        out_data_queue.push_front(next_verif_vector_out);
+      end
+    end
+  end
+
+  int first_bit;
+
   always_comb
   begin
+    first_bit = 0;
     next_verif_vector_in = verif_vector_in;
-    if(ctrl.first & ctrl.realign) begin
+    if(in_first & in_realign) begin
+      for(int i=0; i<DS/8; i++) begin
+        if(in_strb[i] == 1'b1) begin
+          first_bit = i*8;
+          break;
+        end
+      end
       for(int i=0; i<DS*DS; i++)
         if ((i>=0) && (i<strb_popcount*8))
-          next_verif_vector_in[i] = in.data[strb_popcount*8+i] & in.strb[(strb_popcount*8+i)/8];
+          next_verif_vector_in[i] = in.data[first_bit+i];
     end
-    else if(ctrl.last & ctrl.realign) begin
+    else if(in_last & in_realign) begin
       for(int i=0; i<DS*DS; i++)
         if ((i>=verif_ctr_in) && (i<verif_ctr_in+DS))
           next_verif_vector_in[i] = in.data[i-verif_ctr_in] & save_strb[(i-verif_ctr_in)/8];
@@ -294,9 +393,10 @@ module tb_hwpe_stream_source_realign_decoupled;
     else begin
       for(int i=0; i<DS*DS; i++)
         if ((i>=verif_ctr_in) && (i<verif_ctr_in+DS))
-          next_verif_vector_in[i] = in.data[i-verif_ctr_in] & in.strb[(i-verif_ctr_in)/8];
+          next_verif_vector_in[i] = in.data[i-verif_ctr_in]; // assume "fully strobed" stream
     end
   end
+
   always_ff @(posedge clk_i)
   begin
     if(~enable | real_last) begin
@@ -304,8 +404,8 @@ module tb_hwpe_stream_source_realign_decoupled;
       verif_ctr_in <= 0;
     end
     else if(in.valid & in.ready) begin
-      if(ctrl.first) begin
-        verif_ctr_in <= verif_ctr_in + strb_popcount*8;
+      if(in_first) begin
+        verif_ctr_in <= verif_ctr_in + (DS-first_bit);
         verif_vector_in <= next_verif_vector_in;
       end
       else if(real_last) begin
@@ -332,7 +432,7 @@ module tb_hwpe_stream_source_realign_decoupled;
       verif_vector_out <= '0;
       verif_ctr_out <= 0;
     end
-    else if(real_last) begin
+    else if(real_last_out) begin
       verif_ctr_out <= 0;
       verif_vector_out <= '0;
     end
@@ -342,23 +442,40 @@ module tb_hwpe_stream_source_realign_decoupled;
     end
   end
 
-  always_ff @(posedge clk_i)
+  always @(clk_i)
   begin
-    if(gold_valid_out & gold_valid_in) begin
-      gold_valid_out <= 1'b0;
-      gold_valid_in  <= 1'b0;
-    end
-    else begin
-      if(real_last) begin
-        gold_vector_out <= next_verif_vector_out;
-        gold_valid_out  <= 1'b1;
-        gold_vector_in <= next_verif_vector_in;
-        gold_valid_in  <= 1'b1;
+    clk_delayed <= #(TT) clk_i;
+  end
+  
+  always @(clk_i)
+  begin
+    clk_assert <= #(TA) clk_i;
+  end
+
+  logic check_valid, check_data;
+  always_ff @(posedge clk_delayed)
+  begin
+    check_valid = '0;
+    check_data = '0;
+    if(in_data_queue.size() > 1 && out_data_queue.size() > 1) begin
+      automatic logic [DS*DS-1:0] in_pop  = in_data_queue.pop_back();
+      automatic logic [DS*DS-1:0] out_pop = out_data_queue.pop_back();
+      check_valid = '1;
+      if (in_pop == out_pop) begin
+        check_data = '1;
+        $display("%0x == %0x\n", in_pop, out_pop);
       end
+      else
+        $display("%0x != %0x\n", in_pop, out_pop);
     end
   end
 
-  assert property (@(posedge clk_i) (gold_valid_in & gold_valid_out) |-> (gold_vector_in == gold_vector_out))
-    else $warning("Wrong realignment!!!");
+  property check_data_assert;
+    @(posedge clk_assert)
+    (check_valid == 1'b1) |-> check_data == 1'b1;
+  endproperty;
+
+  DATA_WRONG: assert property(check_data_assert)
+  else $fatal("ASSERTION FAILURE: DATA_WRONG", 1);
 
 endmodule

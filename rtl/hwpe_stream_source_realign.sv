@@ -28,6 +28,7 @@ module hwpe_stream_source_realign #(
   input  logic                    clear_i,
 
   input  ctrl_realign_t           ctrl_i,
+  output flags_realign_t          flags_o,
   
   input  logic [DATA_WIDTH/8-1:0] strb_i, 
   hwpe_stream_intf_stream.sink    stream_i,
@@ -37,8 +38,8 @@ module hwpe_stream_source_realign #(
   logic [STRB_FIFO_DEPTH-1:0][DATA_WIDTH/8-1:0] strb_last_r, strb_first_r;
   logic [DATA_WIDTH/8-1:0] int_strb;
 
-  logic [$clog2(STRB_FIFO_DEPTH)-1:0] strb_first_cnt;
-  logic [$clog2(STRB_FIFO_DEPTH)-1:0] strb_last_cnt;
+  logic [$clog2(STRB_FIFO_DEPTH):0] strb_first_cnt;
+  logic [$clog2(STRB_FIFO_DEPTH):0] strb_last_cnt;
 
   logic unsigned [$clog2(DATA_WIDTH/8):0] strb_rotate_d;
   logic unsigned [$clog2(DATA_WIDTH/8):0] strb_rotate_inv_d;
@@ -83,9 +84,6 @@ module hwpe_stream_source_realign #(
         if(stream_i.valid & stream_i.ready) begin
           next_word_cnt = word_cnt + 1;
         end
-        if((stream_i.valid & stream_i.ready) && word_cnt >0 && line_length_m1 == 2) begin
-          next_word_cnt = '0;
-        end
         if((stream_i.valid & stream_i.ready) && word_cnt == line_length_m1) begin
           next_word_cnt = '0;
         end
@@ -108,10 +106,7 @@ module hwpe_stream_source_realign #(
       always_comb
       begin : int_last_comb
         int_last = '1;
-        if((word_cnt < line_length_m1) && (line_length_m1 == 2)) begin
-          int_last = ctrl_i.last;
-        end
-        else if(word_cnt < line_length_m1) begin
+        if(word_cnt < line_length_m1) begin
           int_last = '0;
         end
       end
@@ -201,13 +196,13 @@ module hwpe_stream_source_realign #(
           if(ctrl_i.first & (strb_first_cnt == '0))
             int_strb = strb_i;
           else
-            int_strb = strb_first_r[strb_first_cnt];
+            int_strb = strb_first_r[strb_first_cnt-1];
         end
         else if(int_last) begin
           if(ctrl_i.last & (strb_last_cnt == '0))
             int_strb = strb_i;
           else
-            int_strb = strb_last_r[strb_last_cnt];
+            int_strb = strb_last_r[strb_last_cnt-1];
         end
       end
 
@@ -277,5 +272,7 @@ module hwpe_stream_source_realign #(
                                               stream_o.ready | int_first;
 
   assign stream_o.strb = '1;
+
+  assign flags_o.decoupled_stall = (strb_first_cnt >= STRB_FIFO_DEPTH-4 || strb_first_cnt >= STRB_FIFO_DEPTH-4) ? '1 : '0;
 
 endmodule // hwpe_stream_source_realign
