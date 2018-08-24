@@ -333,7 +333,7 @@ module hwpe_stream_addressgen
       always_comb
       begin
         flags_o.realign_flags = aux.realign_flags;
-        flags_o.realign_flags.strb_valid = strb_valid_r1;
+        flags_o.realign_flags.strb_valid = strb_valid_r0 & (aux.realign_flags.first | aux.realign_flags.last);
       end
       assign gen_strb_o = gen_strb_r;
     end
@@ -341,7 +341,7 @@ module hwpe_stream_addressgen
       always_comb
       begin
         flags_o.realign_flags = flags.realign_flags;
-        flags_o.realign_flags.strb_valid = strb_valid_r0;
+        flags_o.realign_flags.strb_valid = enable_int & (flags.realign_flags.first | flags.realign_flags.last);
       end
       assign gen_strb_o = gen_strb_int;
     end
