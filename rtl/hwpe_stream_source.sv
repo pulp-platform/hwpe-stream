@@ -91,8 +91,8 @@ module hwpe_stream_source
     .clk_i    ( clk_i              ),
     .rst_ni   ( rst_ni             ),
     .clear_i  ( clear_i            ),
-    .stream_i ( fenced_streams     ),
-    .stream_o ( misaligned_stream  )
+    .push_i   ( fenced_streams     ),
+    .pop_o    ( misaligned_stream  )
   );
 
   // generate addresses
@@ -122,8 +122,8 @@ module hwpe_stream_source
     .clear_i    ( clear_i                                ),
     .ctrl_i     ( flags_o.addressgen_flags.realign_flags ),
     .strb_i     ( gen_strb                               ),
-    .stream_i   ( misaligned_fifo_stream                 ),
-    .stream_o   ( stream                                 )
+    .push_i     ( misaligned_fifo_stream                 ),
+    .pop_o      ( stream                                 )
   );
 
   // tcdm ports binding

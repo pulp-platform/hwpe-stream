@@ -30,8 +30,8 @@ module hwpe_stream_demux_static
 
   input  logic [$clog2(NB_OUT_STREAMS)-1:0] sel_i,
 
-  hwpe_stream_intf_stream.sink   in,
-  hwpe_stream_intf_stream.source out [NB_OUT_STREAMS-1:0]
+  hwpe_stream_intf_stream.sink   push_i,
+  hwpe_stream_intf_stream.source pop_o [NB_OUT_STREAMS-1:0]
 );
 
   logic [NB_OUT_STREAMS-1:0] out_ready;
@@ -40,14 +40,14 @@ module hwpe_stream_demux_static
     for(genvar i=0; i<NB_OUT_STREAMS; i++) begin : tcdm_binding
 
       // tcdm ports binding
-      assign out[i].valid = in.valid & (sel_i == i);
-      assign out[i].data  = in.data;
-      assign out[i].strb  = in.strb;
-      assign out_ready[i] = out[i].ready;
+      assign pop_o[i].valid = push_i.valid & (sel_i == i);
+      assign pop_o[i].data  = push_i.data;
+      assign pop_o[i].strb  = push_i.strb;
+      assign out_ready[i] = pop_o[i].ready;
 
     end
   endgenerate
 
-  assign in.ready = out_ready[sel_i];
+  assign push_i.ready = out_ready[sel_i];
 
 endmodule // hwpe_stream_demux_static

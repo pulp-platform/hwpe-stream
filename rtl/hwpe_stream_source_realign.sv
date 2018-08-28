@@ -31,8 +31,8 @@ module hwpe_stream_source_realign #(
   output flags_realign_t          flags_o,
   
   input  logic [DATA_WIDTH/8-1:0] strb_i, 
-  hwpe_stream_intf_stream.sink    stream_i,
-  hwpe_stream_intf_stream.source  stream_o
+  hwpe_stream_intf_stream.sink    push_i,
+  hwpe_stream_intf_stream.source  pop_o
 );
 
   logic [STRB_FIFO_DEPTH-1:0][DATA_WIDTH/8-1:0] strb_last_r, strb_first_r;
@@ -82,10 +82,10 @@ module hwpe_stream_source_realign #(
       always_comb
       begin
         next_word_cnt = word_cnt;
-        if(stream_i.valid & stream_i.ready) begin
+        if(push_i.valid & push_i.ready) begin
           next_word_cnt = word_cnt + 1;
         end
-        if((stream_i.valid & stream_i.ready) && word_cnt == line_length_m1) begin
+        if((push_i.valid & push_i.ready) && word_cnt == line_length_m1) begin
           next_word_cnt = '0;
         end
       end
@@ -130,7 +130,7 @@ module hwpe_stream_source_realign #(
           strb_first_cnt <= '0;
         end
         else begin
-          if(ctrl_i.strb_valid & ctrl_i.first & stream_i.valid & stream_i.ready & int_first) begin
+          if(ctrl_i.strb_valid & ctrl_i.first & push_i.valid & push_i.ready & int_first) begin
             strb_first_cnt <= strb_first_cnt;
             strb_first_r[0] <= strb_i;
             for(int i=1; i<STRB_FIFO_DEPTH; i++)
@@ -142,7 +142,7 @@ module hwpe_stream_source_realign #(
             for(int i=1; i<STRB_FIFO_DEPTH; i++)
               strb_first_r[i] <= strb_first_r[i-1];
           end
-          else if(stream_i.valid & stream_i.ready & int_first) begin
+          else if(push_i.valid & push_i.ready & int_first) begin
             strb_first_cnt <= strb_first_cnt - 1;
           end
         end
@@ -161,7 +161,7 @@ module hwpe_stream_source_realign #(
           last_packet_r <= '0;
         end
         else begin
-          if(ctrl_i.strb_valid & ctrl_i.last & stream_i.valid & stream_i.ready & int_last) begin
+          if(ctrl_i.strb_valid & ctrl_i.last & push_i.valid & push_i.ready & int_last) begin
             strb_last_r[0] <= strb_i;
             last_packet_r[0] <= ctrl_i.last_packet;
             for(int i=1; i<STRB_FIFO_DEPTH; i++) begin
@@ -178,7 +178,7 @@ module hwpe_stream_source_realign #(
               last_packet_r[i] <= last_packet_r[i-1];
             end
           end
-          else if(stream_i.valid & stream_i.ready & int_last) begin
+          else if(push_i.valid & push_i.ready & int_last) begin
             strb_last_cnt <= strb_last_cnt - 1;
           end
         end
@@ -253,25 +253,25 @@ module hwpe_stream_source_realign #(
     else if (clear_i)
       stream_data_q <= '0;
     // last packet is kept "forever"
-    else if (~int_last_packet & stream_i.valid & stream_i.ready)
-      stream_data_q <= stream_i.data;
+    else if (~int_last_packet & push_i.valid & push_i.ready)
+      stream_data_q <= push_i.data;
   end
   always_comb
   begin
-    stream_o.data = stream_i.data;
+    pop_o.data = push_i.data;
     if(ctrl_i.realign) begin
       if ((strb_rotate_q != '1) && (strb_rotate_q != '0))
-        stream_o.data = stream_i.data << strb_rotate_q_shifted | stream_data_q >> strb_rotate_inv_q_shifted;
+        pop_o.data = push_i.data << strb_rotate_q_shifted | stream_data_q >> strb_rotate_inv_q_shifted;
     end
   end
-  assign stream_o.valid = (~ctrl_i.realign) ? stream_i.valid :
-                          (int_last_packet) ? stream_i.valid :
-                                              stream_i.valid & ~int_first & (int_last | (|int_strb));
-  assign stream_i.ready = (~ctrl_i.realign) ? stream_o.ready :
-                          (int_last_packet) ? stream_o.ready :
-                                              stream_o.ready | int_first;
+  assign pop_o.valid = (~ctrl_i.realign) ? push_i.valid :
+                       (int_last_packet) ? push_i.valid :
+                                           push_i.valid & ~int_first & (int_last | (|int_strb));
+  assign push_i.ready = (~ctrl_i.realign) ? pop_o.ready :
+                        (int_last_packet) ? pop_o.ready :
+                                            pop_o.ready | int_first;
 
-  assign stream_o.strb = '1;
+  assign pop_o.strb = '1;
 
   assign flags_o.decoupled_stall = (strb_first_cnt >= STRB_FIFO_DEPTH-4 || strb_first_cnt >= STRB_FIFO_DEPTH-4) ? '1 : '0;
 

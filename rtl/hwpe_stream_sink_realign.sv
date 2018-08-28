@@ -27,8 +27,8 @@ module hwpe_stream_sink_realign #(
   input  ctrl_realign_t           ctrl_i,
   
   input  logic [DATA_WIDTH/8-1:0] strb_i, 
-  hwpe_stream_intf_stream.sink    stream_i,
-  hwpe_stream_intf_stream.source  stream_o
+  hwpe_stream_intf_stream.sink    push_i,
+  hwpe_stream_intf_stream.source  pop_o
 );
 
   logic [DATA_WIDTH/8-1:0] strb_q;
@@ -53,26 +53,26 @@ module hwpe_stream_sink_realign #(
 
   logic first_state, first_sticky;
 
-  /* stick the value of ctrl_i.first in first_sticky until stream_o.ready */
+  /* stick the value of ctrl_i.first in first_sticky until pop_o.ready */
   always_ff @(posedge clk_i or negedge rst_ni)
   begin
     if(~rst_ni)
       first_state <= '0;
     else if(clear_i)
       first_state <= '0;
-    else if(ctrl_i.first & ~stream_i.ready)
+    else if(ctrl_i.first & ~push_i.ready)
       first_state <= 1'b1;
-    else if (stream_i.ready)
+    else if (push_i.ready)
       first_state <= 1'b0;
   end
   assign first_sticky = ~ctrl_i.last_packet & ctrl_i.first | first_state;
 
   /* management of misaligned accesses */
-  assign int_valid = (~ctrl_i.realign)    ? stream_i.valid :
+  assign int_valid = (~ctrl_i.realign)    ? push_i.valid :
                      (ctrl_i.last_packet) ? 1'b0 :
-                                            (stream_i.valid | ctrl_i.last) & |strb_i;
-  assign stream_i.ready = (~ctrl_i.realign) ? int_ready :
-                                              int_ready & ~ctrl_i.last;
+                                            (push_i.valid | ctrl_i.last) & |strb_i;
+  assign push_i.ready = (~ctrl_i.realign) ? int_ready :
+                                            int_ready & ~ctrl_i.last;
 
   // save the strobes of the first misaligned transfer as a reference!
   // this implicitly assumes that all strobes result in a rotation - it
@@ -100,8 +100,8 @@ module hwpe_stream_sink_realign #(
       stream_strb_q <= '0;
     else if (clear_i)
       stream_strb_q <= '0;
-    else if (stream_i.valid & stream_i.ready & ctrl_i.first) begin
-      stream_strb_q <= stream_i.strb;
+    else if (push_i.valid & push_i.ready & ctrl_i.first) begin
+      stream_strb_q <= push_i.strb;
     end
   end
 
@@ -111,8 +111,8 @@ module hwpe_stream_sink_realign #(
       stream_strb_latest_q <= '0;
     else if (clear_i)
       stream_strb_latest_q <= '0;
-    else if (stream_i.valid & stream_i.ready) begin
-      stream_strb_latest_q <= stream_i.strb;
+    else if (push_i.valid & push_i.ready) begin
+      stream_strb_latest_q <= push_i.strb;
     end
   end
 
@@ -149,32 +149,32 @@ module hwpe_stream_sink_realign #(
       stream_data_q <= '0;
     else if (clear_i)
       stream_data_q <= '0;
-    else if (stream_i.valid & stream_i.ready) begin
-      stream_data_q <= stream_i.data;
+    else if (push_i.valid & push_i.ready) begin
+      stream_data_q <= push_i.data;
     end
   end
 
   always_comb
   begin
-    int_data = stream_i.data;
-    int_strb = stream_i.strb;
+    int_data = push_i.data;
+    int_strb = push_i.strb;
     if(ctrl_i.realign) begin
       if(first_sticky) begin
-        int_data =  stream_i.data << strb_rotate_d_shifted;
-        int_strb = (stream_i.strb << strb_rotate_d) & strb_i;
+        int_data =  push_i.data << strb_rotate_d_shifted;
+        int_strb = (push_i.strb << strb_rotate_d) & strb_i;
       end
       else begin
-        int_data =  (stream_i.data << strb_rotate_q_shifted) | (stream_data_q >> strb_rotate_inv_shifted);
+        int_data =  (push_i.data << strb_rotate_q_shifted) | (stream_data_q >> strb_rotate_inv_shifted);
         if(ctrl_i.last)
           int_strb = ((stream_strb_q & stream_strb_latest_q) >> strb_rotate_inv_q);
         else
-          int_strb = ((stream_i.strb << strb_rotate_q) & strb_q | (stream_strb_q >> strb_rotate_inv_q));
+          int_strb = ((push_i.strb << strb_rotate_q) & strb_q | (stream_strb_q >> strb_rotate_inv_q));
       end
     end
   end
 
   /* ensure that the stream follows the correct protocol */
-  assign int_ready = stream_o.ready;
+  assign int_ready = pop_o.ready;
 
   always_ff @(posedge clk_i or negedge rst_ni)
   begin
@@ -197,8 +197,8 @@ module hwpe_stream_sink_realign #(
       int_valid_q <= 1'b0;
     end
   end
-  assign stream_o.data = int_valid ? int_data : int_data_q;
-  assign stream_o.strb = (int_valid | ctrl_i.last) ? int_strb : int_strb_q;
-  assign stream_o.valid = int_valid | int_valid_q;
+  assign pop_o.data = int_valid ? int_data : int_data_q;
+  assign pop_o.strb = (int_valid | ctrl_i.last) ? int_strb : int_strb_q;
+  assign pop_o.valid = int_valid | int_valid_q;
 
 endmodule // hwpe_stream_sink_realign

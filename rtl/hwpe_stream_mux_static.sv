@@ -27,16 +27,16 @@ module hwpe_stream_mux_static
 
   input  logic                   sel_i,
 
-  hwpe_stream_intf_stream.sink   in0,
-  hwpe_stream_intf_stream.sink   in1,
-  hwpe_stream_intf_stream.source out
+  hwpe_stream_intf_stream.sink   push_0_i,
+  hwpe_stream_intf_stream.sink   push_1_i,
+  hwpe_stream_intf_stream.source pop_o
 );
 
   // tcdm ports binding
-  assign out.valid = (sel_i) ? in1.valid : in0.valid;
-  assign out.data  = (sel_i) ? in1.data  : in0.data;
-  assign out.strb  = (sel_i) ? in1.strb  : in0.strb;
-  assign in0.ready = (sel_i) ? 1'b0      : out.ready;
-  assign in1.ready = (sel_i) ? out.ready : 1'b0;
+  assign pop_o.valid = (sel_i) ? push_1_i.valid : push_0_i.valid;
+  assign pop_o.data  = (sel_i) ? push_1_i.data  : push_0_i.data;
+  assign pop_o.strb  = (sel_i) ? push_1_i.strb  : push_0_i.strb;
+  assign push_0_i.ready = (sel_i) ? 1'b0      : pop_o.ready;
+  assign push_1_i.ready = (sel_i) ? pop_o.ready : 1'b0;
 
 endmodule // hwpe_stream_mux_static

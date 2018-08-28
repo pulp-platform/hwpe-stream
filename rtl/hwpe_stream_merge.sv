@@ -24,8 +24,8 @@ module hwpe_stream_merge #(
   input  logic                   rst_ni,
   input  logic                   clear_i,
   
-  hwpe_stream_intf_stream.sink   stream_i [NB_IN_STREAMS-1:0],
-  hwpe_stream_intf_stream.source stream_o
+  hwpe_stream_intf_stream.sink   push_i [NB_IN_STREAMS-1:0],
+  hwpe_stream_intf_stream.source pop_o
 );
 
   parameter STRB_WIDTH_IN = DATA_WIDTH_IN / 8;
@@ -37,20 +37,20 @@ module hwpe_stream_merge #(
     for(genvar ii=0; ii<NB_IN_STREAMS; ii++) begin : stream_binding
 
       // split data is bound in order
-      assign stream_o.data[(ii+1)*DATA_WIDTH_IN-1:ii*DATA_WIDTH_IN] = stream_i[ii].data;
-      assign stream_o.strb[(ii+1)*STRB_WIDTH_IN-1:ii*STRB_WIDTH_IN] = stream_i[ii].strb;
+      assign pop_o.data[(ii+1)*DATA_WIDTH_IN-1:ii*DATA_WIDTH_IN] = push_i[ii].data;
+      assign pop_o.strb[(ii+1)*STRB_WIDTH_IN-1:ii*STRB_WIDTH_IN] = push_i[ii].strb;
 
       // split ready is brodcast to all incoming streams
-      assign stream_i[ii].ready = stream_o.ready;
+      assign push_i[ii].ready = pop_o.ready;
 
       // auxiliary for ready generation
-      assign stream_valid[ii] = stream_i[ii].valid;
+      assign stream_valid[ii] = push_i[ii].valid;
 
     end
 
   endgenerate
 
   // valid only when all divergent streams are valid
-  assign stream_o.valid = & stream_valid;
+  assign pop_o.valid = & stream_valid;
 
 endmodule // hwpe_stream_merge

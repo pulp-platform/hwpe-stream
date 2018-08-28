@@ -116,8 +116,8 @@ module tb_hwpe_stream_sink_realign;
     .test_mode_i ( 1'b0   ),
     .ctrl_i      ( ctrl   ),
     .strb_i      ( strb   ),
-    .stream_i    ( in     ),
-    .stream_o    ( out    )
+    .push_i      ( in     ),
+    .pop_o       ( out    )
   );
 
   tb_hwpe_stream_receiver #(

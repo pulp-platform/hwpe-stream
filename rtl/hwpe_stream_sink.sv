@@ -68,11 +68,11 @@ module hwpe_stream_sink
     .DATA_WIDTH_IN ( DATA_WIDTH    ),
     .NB_OUT_STREAMS( NB_TCDM_PORTS )
   ) i_stream_split (
-    .clk_i    ( clk_i            ),
-    .rst_ni   ( rst_ni           ),
-    .clear_i  ( clear_i          ),
-    .stream_i ( realigned_stream ),
-    .stream_o ( split_streams    )
+    .clk_i   ( clk_i            ),
+    .rst_ni  ( rst_ni           ),
+    .clear_i ( clear_i          ),
+    .push_i  ( realigned_stream ),
+    .pop_o   ( split_streams    )
   );
 
   hwpe_stream_addressgen #(
@@ -108,8 +108,8 @@ module hwpe_stream_sink
     .clear_i     ( clear_i                                ),
     .ctrl_i      ( flags_o.addressgen_flags.realign_flags ),
     .strb_i      ( gen_strb                               ),
-    .stream_i    ( stream                                 ),
-    .stream_o    ( realigned_stream                       )
+    .push_i      ( stream                                 ),
+    .pop_o       ( realigned_stream                       )
   );
 
   // tcdm ports binding

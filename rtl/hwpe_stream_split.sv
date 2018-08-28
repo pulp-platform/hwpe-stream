@@ -24,8 +24,8 @@ module hwpe_stream_split #(
   input  logic                   rst_ni,
   input  logic                   clear_i,
   
-  hwpe_stream_intf_stream.sink   stream_i,
-  hwpe_stream_intf_stream.source stream_o [NB_OUT_STREAMS-1:0]
+  hwpe_stream_intf_stream.sink   push_i,
+  hwpe_stream_intf_stream.source pop_o [NB_OUT_STREAMS-1:0]
 );
 
   parameter DATA_WIDTH_OUT = DATA_WIDTH_IN/NB_OUT_STREAMS;
@@ -38,20 +38,20 @@ module hwpe_stream_split #(
     for(genvar ii=0; ii<NB_OUT_STREAMS; ii++) begin : stream_binding
 
       // split data is bound in order
-      assign stream_o[ii].data  = stream_i.data [(ii+1)*DATA_WIDTH_OUT-1:ii*DATA_WIDTH_OUT];
-      assign stream_o[ii].strb  = stream_i.strb [(ii+1)*STRB_WIDTH_OUT-1:ii*STRB_WIDTH_OUT];
+      assign pop_o[ii].data  = push_i.data [(ii+1)*DATA_WIDTH_OUT-1:ii*DATA_WIDTH_OUT];
+      assign pop_o[ii].strb  = push_i.strb [(ii+1)*STRB_WIDTH_OUT-1:ii*STRB_WIDTH_OUT];
 
       // split valid is broadcast to all outgoing streams
-      assign stream_o[ii].valid = stream_i.valid;
+      assign pop_o[ii].valid = push_i.valid;
 
       // auxiliary for ready generation
-      assign stream_ready[ii] = stream_o[ii].ready;
+      assign stream_ready[ii] = pop_o[ii].ready;
 
     end
 
   endgenerate
 
   // ready only when all diverging streams are ready
-  assign stream_i.ready = & stream_ready;
+  assign push_i.ready = & stream_ready;
 
 endmodule // hwpe_stream_split

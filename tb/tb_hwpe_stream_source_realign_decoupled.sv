@@ -141,8 +141,8 @@ module tb_hwpe_stream_source_realign_decoupled;
     .ctrl_i      ( delayed_ctrl ),
     .flags_o     ( flags        ),
     .strb_i      ( gen_strb     ),
-    .stream_i    ( in           ),
-    .stream_o    ( out          )
+    .push_i      ( in           ),
+    .pop_o       ( out          )
   );
 
   tb_hwpe_stream_receiver #(
