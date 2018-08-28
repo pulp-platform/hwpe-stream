@@ -68,9 +68,9 @@ module hwpe_stream_sink_realign #(
   assign first_sticky = ~ctrl_i.last_packet & ctrl_i.first | first_state;
 
   /* management of misaligned accesses */
-  assign int_valid = (~ctrl_i.realign)                   ? stream_i.valid :
-                          (~ctrl_i.last & ctrl_i.last_packet) ? 1'b0 :
-                                                                (stream_i.valid | ctrl_i.last) & |strb_i;
+  assign int_valid = (~ctrl_i.realign)    ? stream_i.valid :
+                     (ctrl_i.last_packet) ? 1'b0 :
+                                            (stream_i.valid | ctrl_i.last) & |strb_i;
   assign stream_i.ready = (~ctrl_i.realign) ? int_ready :
                                               int_ready & ~ctrl_i.last;
 
