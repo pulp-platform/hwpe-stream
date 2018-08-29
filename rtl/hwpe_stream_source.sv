@@ -308,6 +308,7 @@ module hwpe_stream_source
               end
               else if(overall_none == 1'b1 || overall_cnt != '0) begin
                 ns = STREAM_DONE;
+                address_gen_en = 1'b0;
               end
             end
             else begin

@@ -293,10 +293,10 @@ module hwpe_stream_addressgen
     gen_strb_int = '1;
     if(misalignment) begin
       if (misalignment_first) begin
-        gen_strb_int =   gen_strb_int << gen_addr_int[$clog2(STEP)-1:0];
+        gen_strb_int =   gen_strb_int << gen_addr_int[1:0];
       end
       if (misalignment_last) begin
-        gen_strb_int = ~(gen_strb_int << gen_addr_int[$clog2(STEP)-1:0]);
+        gen_strb_int = ~(gen_strb_int << gen_addr_int[1:0]);
       end
     end
   end
