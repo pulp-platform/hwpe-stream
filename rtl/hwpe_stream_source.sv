@@ -306,8 +306,16 @@ module hwpe_stream_source
               if(flags_o.addressgen_flags.in_progress == 1'b1) begin
                 ns = STREAM_WORKING;
               end
+              else if((flags_o.addressgen_flags.realign_flags.enable && ctrl_i.addressgen_ctrl.line_length==1) && (overall_none == 1'b1)) begin
+                ns = STREAM_WORKING;
+              end
               else if(overall_none == 1'b1 || overall_cnt != '0) begin
                 ns = STREAM_DONE;
+              end
+              else if((flags_o.addressgen_flags.realign_flags.enable && ctrl_i.addressgen_ctrl.line_length==1) && (overall_none == 1'b0)) begin
+                ns = STREAM_IDLE;
+                done = 1'b1;
+                address_gen_clr = 1'b1;
               end
             end
             else begin
