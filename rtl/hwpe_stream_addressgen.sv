@@ -293,10 +293,10 @@ module hwpe_stream_addressgen
     gen_strb_int = '1;
     if(misalignment) begin
       if (misalignment_first) begin
-        gen_strb_int =   gen_strb_int << gen_addr_int[$clog2(STEP)-1:0];
+        gen_strb_int =   gen_strb_int << gen_addr_int[1:0];
       end
       if (misalignment_last) begin
-        gen_strb_int = ~(gen_strb_int << gen_addr_int[$clog2(STEP)-1:0]);
+        gen_strb_int = ~(gen_strb_int << gen_addr_int[1:0]);
       end
     end
   end
@@ -333,7 +333,7 @@ module hwpe_stream_addressgen
       always_comb
       begin
         flags_o.realign_flags = aux.realign_flags;
-        flags_o.realign_flags.strb_valid = strb_valid_r0 & (aux.realign_flags.first | aux.realign_flags.last);
+        flags_o.realign_flags.strb_valid = enable_int & (aux.realign_flags.first | aux.realign_flags.last);
       end
       assign gen_strb_o = gen_strb_r;
     end

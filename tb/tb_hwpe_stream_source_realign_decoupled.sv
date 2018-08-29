@@ -25,7 +25,7 @@ module tb_hwpe_stream_source_realign_decoupled;
   // parameters
   parameter PROB_STALL_SOURCE = 0.05;
   parameter PROB_STALL_SINK   = 0.05;
-  parameter DS = 32;
+  parameter DS = 64;
   parameter DECOUPLED = 1;
   parameter STRB_FIFO_DEPTH = 64;
 

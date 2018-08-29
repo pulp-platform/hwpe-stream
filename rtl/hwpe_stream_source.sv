@@ -45,7 +45,7 @@ module hwpe_stream_source
   logic address_gen_clr;
 
   logic [31:0]                gen_addr;
-  logic [NB_TCDM_PORTS*4-1:0] gen_strb;
+  logic [NB_TCDM_PORTS*4-1:0] gen_strb, gen_strb_r;
 
   logic tcdm_int_req;
   logic tcdm_int_gnt;
@@ -111,19 +111,49 @@ module hwpe_stream_source
     .flags_o        ( flags_o.addressgen_flags )
   );
 
+  ctrl_realign_t realign_r, realign_ctrl;
+
+  always_ff @(posedge clk_i or negedge rst_ni)
+  begin
+    if(~rst_ni) begin
+      realign_r  <= '0;
+      gen_strb_r <= '0;
+    end
+    else if(clear_i) begin
+      realign_r  <= '0;
+      gen_strb_r <= '0;
+    end
+    else begin
+      realign_r  <= flags_o.addressgen_flags.realign_flags;
+      gen_strb_r <= gen_strb;
+    end
+  end
+
+  always_comb
+  begin
+    realign_ctrl = realign_r;
+    realign_ctrl.last_packet = flags_o.addressgen_flags.realign_flags.last_packet;
+    // realign_ctrl.strb_valid = flags_o.addressgen_flags.realign_flags.strb_valid;
+    if(cs == STREAM_DONE) begin
+      realign_ctrl.first      = '0;
+      realign_ctrl.last       = '0;
+      realign_ctrl.strb_valid = '0;
+    end
+  end
+
   // realign the merged stream
   hwpe_stream_source_realign #(
     .DECOUPLED  ( DECOUPLED  ),
     .DATA_WIDTH ( DATA_WIDTH )
   ) i_realign (
-    .clk_i      ( clk_i                                  ),
-    .rst_ni     ( rst_ni                                 ),
-    .test_mode_i( test_mode_i                            ),
-    .clear_i    ( clear_i                                ),
-    .ctrl_i     ( flags_o.addressgen_flags.realign_flags ),
-    .strb_i     ( gen_strb                               ),
-    .push_i     ( misaligned_fifo_stream                 ),
-    .pop_o      ( stream                                 )
+    .clk_i      ( clk_i                  ),
+    .rst_ni     ( rst_ni                 ),
+    .test_mode_i( test_mode_i            ),
+    .clear_i    ( clear_i                ),
+    .ctrl_i     ( realign_ctrl           ),
+    .strb_i     ( gen_strb_r             ),
+    .push_i     ( misaligned_fifo_stream ),
+    .pop_o      ( stream                 )
   );
 
   // tcdm ports binding
@@ -308,6 +338,7 @@ module hwpe_stream_source
               end
               else if(overall_none == 1'b1 || overall_cnt != '0) begin
                 ns = STREAM_DONE;
+                address_gen_en = 1'b0;
               end
             end
             else begin
