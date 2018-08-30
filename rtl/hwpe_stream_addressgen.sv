@@ -329,28 +329,13 @@ module hwpe_stream_addressgen
       end
     end
 
-    if(REALIGN_TYPE == HWPE_STREAM_REALIGN_SOURCE) begin
-      always_comb
-      begin
-        flags_o.realign_flags = aux.realign_flags;
-        flags_o.realign_flags.strb_valid = strb_valid_r0 & (aux.realign_flags.first | aux.realign_flags.last);
-      end
-      assign gen_strb_o = gen_strb_r;
-    end
-    else begin
-      always_comb
-      begin
-        flags_o.realign_flags = flags.realign_flags;
-        flags_o.realign_flags.strb_valid = enable_int & (flags.realign_flags.first | flags.realign_flags.last);
-      end
-      assign gen_strb_o = gen_strb_int;
-    end
     assign flags_o.word_update = aux.word_update;
     assign flags_o.line_update = aux.line_update;
     assign flags_o.feat_update = aux.feat_update;
     assign flags_o.in_progress = aux.in_progress;
 
     if(DELAY_FLAGS) begin : delay_flags_gen
+
       // this is required to align the flags with the TCDM response phase
       // in some accelerators (it can be disabled, or done externally)
       always_ff @(posedge clk_i or negedge rst_ni)
@@ -368,10 +353,46 @@ module hwpe_stream_addressgen
           gen_strb_r <= gen_strb_int;
         end
       end
+      if(REALIGN_TYPE == HWPE_STREAM_REALIGN_SOURCE) begin
+        always_comb
+        begin
+          flags_o.realign_flags = aux.realign_flags;
+          flags_o.realign_flags.strb_valid = strb_valid_r0 & (aux.realign_flags.first | aux.realign_flags.last);
+        end
+        assign gen_strb_o = gen_strb_r;
+      end
+      else begin
+        always_comb
+        begin
+          flags_o.realign_flags = flags.realign_flags;
+          flags_o.realign_flags.strb_valid = enable_int & (flags.realign_flags.first | flags.realign_flags.last);
+        end
+        assign gen_strb_o = gen_strb_int;
+      end
+
     end
     else begin : no_delay_flags_gen
+
       assign aux = flags;
       assign gen_strb_r = gen_strb_int;
+
+      if(REALIGN_TYPE == HWPE_STREAM_REALIGN_SOURCE) begin
+        always_comb
+        begin
+          flags_o.realign_flags = aux.realign_flags;
+          flags_o.realign_flags.strb_valid = strb_valid_r0 & (aux.realign_flags.first | aux.realign_flags.last);
+        end
+        assign gen_strb_o = gen_strb_r;
+      end
+      else begin
+        always_comb
+        begin
+          flags_o.realign_flags = flags.realign_flags;
+          flags_o.realign_flags.strb_valid = enable_int & (flags.realign_flags.first | flags.realign_flags.last);
+        end
+        assign gen_strb_o = gen_strb_int;
+      end
+
     end
   endgenerate
 

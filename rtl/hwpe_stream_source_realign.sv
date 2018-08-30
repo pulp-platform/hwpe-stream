@@ -191,6 +191,8 @@ module hwpe_stream_source_realign #(
         if(int_first) begin
           if(ctrl_i.first & (strb_first_cnt == '0))
             int_strb = strb_i;
+          else if(strb_first_cnt < 1)
+            int_strb = '0; // don't care
           else
             int_strb = strb_first_r[strb_first_cnt-1];
         end
@@ -198,6 +200,10 @@ module hwpe_stream_source_realign #(
           if(ctrl_i.last & (strb_last_cnt == '0)) begin
             int_strb = strb_i;
             int_last_packet = ctrl_i.last_packet;
+          end
+          else if(strb_last_cnt < 1) begin
+            int_strb = '1; // don't care
+            int_last_packet = '0; // don't care
           end
           else begin
             int_strb = strb_last_r[strb_last_cnt-1];
