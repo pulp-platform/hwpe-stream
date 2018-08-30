@@ -376,22 +376,12 @@ module hwpe_stream_addressgen
       assign aux = flags;
       assign gen_strb_r = gen_strb_int;
 
-      if(REALIGN_TYPE == HWPE_STREAM_REALIGN_SOURCE) begin
-        always_comb
-        begin
-          flags_o.realign_flags = aux.realign_flags;
-          flags_o.realign_flags.strb_valid = strb_valid_r0 & (aux.realign_flags.first | aux.realign_flags.last);
-        end
-        assign gen_strb_o = gen_strb_r;
+      always_comb
+      begin
+        flags_o.realign_flags = flags.realign_flags;
+        flags_o.realign_flags.strb_valid = enable_int & (flags.realign_flags.first | flags.realign_flags.last);
       end
-      else begin
-        always_comb
-        begin
-          flags_o.realign_flags = flags.realign_flags;
-          flags_o.realign_flags.strb_valid = enable_int & (flags.realign_flags.first | flags.realign_flags.last);
-        end
-        assign gen_strb_o = gen_strb_int;
-      end
+      assign gen_strb_o = gen_strb_int;
 
     end
   endgenerate
