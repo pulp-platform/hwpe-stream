@@ -231,44 +231,22 @@ module hwpe_stream_addressgen
     end
   end
 
-  generate
-    if(REALIGN_TYPE == HWPE_STREAM_REALIGN_SOURCE) begin
-      always_ff @(posedge clk_i or negedge rst_ni)
-      begin
-        if (rst_ni==1'b0)
-          flags.in_progress <= 1'b1;
-        else if (clear_i==1'b1)
-          flags.in_progress <= 1'b1;
-        else
-          if(trans_size_m2 == '1)
-            flags.in_progress <= 1'b0;
-          else if (overall_counter < trans_size_m2)
-            flags.in_progress <= 1'b1;
-          else if ((overall_counter == trans_size_m2) && (enable_int == 1'b0))
-            flags.in_progress <= 1'b1;
-          else
-            flags.in_progress <= 1'b0;
-      end
-    end
-    else begin
-      always_ff @(posedge clk_i or negedge rst_ni)
-      begin
-        if (rst_ni==1'b0)
-          flags.in_progress <= 1'b1;
-        else if (clear_i==1'b1)
-          flags.in_progress <= 1'b1;
-        else
-          if(trans_size_m2 == '1)
-            flags.in_progress <= ((overall_counter == '0) ? 1'b1 : 1'b0);
-          else if (overall_counter < trans_size_m2)
-            flags.in_progress <= 1'b1;
-          else if ((overall_counter == trans_size_m2) && (enable_int == 1'b0))
-            flags.in_progress <= 1'b1;
-          else
-            flags.in_progress <= 1'b0;
-      end
-    end
-  endgenerate
+  always_ff @(posedge clk_i or negedge rst_ni)
+  begin
+    if (rst_ni==1'b0)
+      flags.in_progress <= 1'b1;
+    else if (clear_i==1'b1)
+      flags.in_progress <= 1'b1;
+    else
+      if(trans_size_m2 == '1)
+        flags.in_progress <= ((overall_counter == '0) ? 1'b1 : 1'b0);
+      else if (overall_counter < trans_size_m2)
+        flags.in_progress <= 1'b1;
+      else if ((overall_counter == trans_size_m2) && (enable_int == 1'b0))
+        flags.in_progress <= 1'b1;
+      else
+        flags.in_progress <= 1'b0;
+  end
 
   assign gen_addr_int = base_addr + feat_addr + line_addr + word_addr;
 
