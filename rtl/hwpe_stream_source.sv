@@ -21,7 +21,8 @@ module hwpe_stream_source
   parameter int unsigned DATA_WIDTH = 32,
   parameter int unsigned NB_TCDM_PORTS = DATA_WIDTH/32,
   parameter int unsigned DECOUPLED = 0,
-  parameter int unsigned LATCH_FIFO  = 0
+  parameter int unsigned LATCH_FIFO  = 0,
+  parameter int unsigned TRANS_CNT = 16
 )
 (
   input logic clk_i,
@@ -51,14 +52,11 @@ module hwpe_stream_source
   logic tcdm_int_gnt;
   logic [NB_TCDM_PORTS-1:0] tcdm_split_gnt;
 
-  logic valid_int;
-  logic [DATA_WIDTH -1:0] data_packed;
-  logic [DATA_WIDTH -1:0] data_int;
-
-  logic [15:0] overall_cnt_q, overall_cnt_d;
+  logic [TRANS_CNT-1:0] overall_cnt_q, overall_cnt_d;
   logic overall_none;
 
   logic [NB_TCDM_PORTS-1:0] fence_hs;
+  logic kill_req;
 
   hwpe_stream_intf_stream #(
     .DATA_WIDTH ( 32 )
@@ -98,6 +96,7 @@ module hwpe_stream_source
   // generate addresses
   hwpe_stream_addressgen #(
     .STEP         ( NB_TCDM_PORTS*4            ),
+    .TRANS_CNT    ( TRANS_CNT                  ),
     .REALIGN_TYPE ( HWPE_STREAM_REALIGN_SOURCE )
   ) i_addressgen (
     .clk_i          ( clk_i                    ),
@@ -194,7 +193,7 @@ module hwpe_stream_source
       logic [31:0] stream_data_d,  stream_data_q;
 
       assign tcdm_fifo_ready_o[ii] = split_streams[ii].ready;
-      assign tcdm[ii].req  = tcdm_int_req & ~fence_hs[ii];
+      assign tcdm[ii].req  = tcdm_int_req & ~fence_hs[ii] & ~kill_req;
       assign tcdm[ii].add  = gen_addr + ii*4;
       assign tcdm[ii].wen  = 1'b1;
       assign tcdm[ii].be   = 4'h0;
@@ -269,7 +268,31 @@ module hwpe_stream_source
 
   generate
 
-    if(DECOUPLED) begin : decoupled_ctrl_gen      
+    if(DECOUPLED) begin : decoupled_ctrl_gen
+
+      logic [TRANS_CNT-1:0] request_cnt_q, request_cnt_d;
+
+      // this is necessary to "kill" a final request that may be issued after all the legitimate
+      // ones are already going through the network (may happen consequently to fencing constraints)
+      always_ff @(posedge clk_i or negedge rst_ni)
+      begin
+        if(~rst_ni) begin
+          kill_req <= '0;
+        end
+        else if (clear_i) begin
+          kill_req <= '0;
+        end
+        else begin
+          if(cs == STREAM_IDLE)
+            kill_req <= '0;
+          else if(flags_o.addressgen_flags.realign_flags.enable==1'b1 && (tcdm_int_req & tcdm_int_gnt) && request_cnt_q == ctrl_i.addressgen_ctrl.trans_size) begin
+            kill_req <= '1;
+          end
+          else if(flags_o.addressgen_flags.realign_flags.enable==1'b0 && (tcdm_int_req & tcdm_int_gnt) && request_cnt_q == ctrl_i.addressgen_ctrl.trans_size-1) begin
+            kill_req <= '1;
+          end
+        end
+      end
 
       always_comb
       begin : fsm_comb
@@ -373,8 +396,33 @@ module hwpe_stream_source
         end
       end
 
+      always_comb
+      begin
+        request_cnt_d = request_cnt_q;
+        if(cs == STREAM_IDLE)
+          request_cnt_d = '0;
+        else if(tcdm_int_req & tcdm_int_gnt) begin
+          request_cnt_d = request_cnt_q + 1;
+        end
+      end
+
+      always_ff @(posedge clk_i or negedge rst_ni)
+      begin
+        if(~rst_ni) begin
+          request_cnt_q <= '0;
+        end
+        else if(clear_i) begin
+          request_cnt_q <= '0;
+        end
+        else begin
+          request_cnt_q <= request_cnt_d;
+        end
+      end
+
     end
     else begin : no_decoupled_ctrl_gen
+
+      assign kill_req = 1'b0;
 
       always_comb
       begin : fsm_comb

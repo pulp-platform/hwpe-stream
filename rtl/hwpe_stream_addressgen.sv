@@ -19,6 +19,7 @@ module hwpe_stream_addressgen
 #(
   parameter int unsigned REALIGN_TYPE = HWPE_STREAM_REALIGN_SOURCE,
   parameter int unsigned STEP         = 4,
+  parameter int unsigned TRANS_CNT    = 16,
   parameter int unsigned CNT          = 10, // number of bits used within the internal counter
   parameter int unsigned DELAY_FLAGS  = 0
 )
@@ -53,7 +54,7 @@ module hwpe_stream_addressgen
   logic        enable_int;
   logic        last_packet;
 
-  logic [15:0]    overall_counter;
+  logic [TRANS_CNT-1:0] overall_counter;
   logic [CNT-1:0] word_counter;
   logic [CNT-1:0] line_counter;
   logic [CNT-1:0] feat_counter;
