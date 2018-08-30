@@ -60,9 +60,9 @@ module hwpe_stream_tcdm_mux
 
   logic [$clog2(NB_IN_CHAN/NB_OUT_CHAN)-1:0]                                              rr_counter;
   logic [NB_OUT_CHAN-1:0][NB_IN_CHAN/NB_OUT_CHAN-1:0][$clog2(NB_IN_CHAN/NB_OUT_CHAN)-1:0] rr_priority;
-  logic [NB_OUT_CHAN-1:0][$clog2(NB_IN_CHAN/NB_OUT_CHAN)-1:0]                             winner;
-  logic [NB_OUT_CHAN-1:0][$clog2(NB_IN_CHAN/NB_OUT_CHAN)-1:0]                             last_winner;
-  logic [NB_OUT_CHAN-1:0]                                                                 last_req;
+  logic [NB_OUT_CHAN-1:0][$clog2(NB_IN_CHAN/NB_OUT_CHAN)-1:0]                             winner_d;
+  logic [NB_OUT_CHAN-1:0][$clog2(NB_IN_CHAN/NB_OUT_CHAN)-1:0]                             winner_q;
+  logic [NB_OUT_CHAN-1:0]                                                                 out_req_q;
 
   logic s_rr_counter_reg_en;
   assign s_rr_counter_reg_en = (|out_req) & (|out_gnt);
@@ -132,21 +132,21 @@ module hwpe_stream_tcdm_mux
       end /* no_silence_broadcast_gen */
       else begin : silence_broadcast_gen
 
-        logic [$clog2(NB_IN_CHAN/NB_OUT_CHAN)-1:0] winner_prev;
+        logic [$clog2(NB_IN_CHAN/NB_OUT_CHAN)-1:0] winner_single_q;
 
         always_comb
         begin : winner_prev_comb
           if(i==0)
-            winner_prev = winner[NB_OUT_CHAN-1];
+            winner_single_q = winner_d[NB_OUT_CHAN-1];
           else
-            winner_prev = winner[i-1];
+            winner_single_q = winner_d[i-1];
         end
 
         if(INTERLEAVED_MUXING == 1) begin : interleaved_out_req_gen
           always_comb
           begin : out_req_comb
             out_req[i] = 1'b0;
-            if(winner[i] != winner_prev)
+            if(winner_d[i] != winner_single_q)
               for(int j=0; j<NB_IN_CHAN/NB_OUT_CHAN; j++)
                 out_req[i] = out_req[i] | in_req[j*NB_OUT_CHAN+i];
             else
@@ -157,7 +157,7 @@ module hwpe_stream_tcdm_mux
           always_comb
           begin : out_req_comb
             out_req[i] = 1'b0;
-            if(winner[i] != winner_prev)
+            if(winner_d[i] != winner_single_q)
               for(int j=0; j<NB_IN_CHAN/NB_OUT_CHAN; j++)
                 out_req[i] = out_req[i] | in_req[i*(NB_IN_CHAN/NB_OUT_CHAN)+j];
             else
@@ -170,22 +170,22 @@ module hwpe_stream_tcdm_mux
       if(INTERLEAVED_MUXING == 1) begin : interleaved_winner_gen
         always_comb
         begin : wta_comb
-          winner[i] = rr_counter + i;
+          winner_d[i] = rr_counter + i;
           for(int jj=0; jj<NB_IN_CHAN/NB_OUT_CHAN; jj++) begin
             // automatic int jj = NB_IN_CHAN-j-1;
             if (in_req[rr_priority[i][jj]*NB_OUT_CHAN+i] == 1'b1)
-              winner[i] = rr_priority[i][jj];
+              winner_d[i] = rr_priority[i][jj];
           end
         end
       end /* interleaved_winner_gen */
       else begin : non_interleaved_winner_gen
         always_comb
         begin : wta_comb
-          winner[i] = rr_counter + i;
+          winner_d[i] = rr_counter + i;
           for(int jj=0; jj<NB_IN_CHAN/NB_OUT_CHAN; jj++) begin
             // automatic int jj = NB_IN_CHAN-j-1;
             if (in_req[i*(NB_IN_CHAN/NB_OUT_CHAN)+rr_priority[i][jj]] == 1'b1)
-              winner[i] = rr_priority[i][jj];
+              winner_d[i] = rr_priority[i][jj];
           end
         end
       end /* non_interleaved_winner_gen */
@@ -193,35 +193,35 @@ module hwpe_stream_tcdm_mux
       if(INTERLEAVED_MUXING == 1) begin : interleaved_mux_req_gen
         always_comb
         begin : mux_req_comb
-          out_add  [i] = in_add  [winner[i]*NB_OUT_CHAN+i];
-          out_wen  [i] = in_wen  [winner[i]*NB_OUT_CHAN+i];
-          out_data [i] = in_data [winner[i]*NB_OUT_CHAN+i];
-          out_be   [i] = in_be   [winner[i]*NB_OUT_CHAN+i];
+          out_add  [i] = in_add  [winner_d[i]*NB_OUT_CHAN+i];
+          out_wen  [i] = in_wen  [winner_d[i]*NB_OUT_CHAN+i];
+          out_data [i] = in_data [winner_d[i]*NB_OUT_CHAN+i];
+          out_be   [i] = in_be   [winner_d[i]*NB_OUT_CHAN+i];
         end
       end /* interleaved_mux_req_gen */
       else begin : non_interleaved_mux_req_gen
         always_comb
         begin : mux_req_comb
-          out_add  [i] = in_add  [i*(NB_IN_CHAN/NB_OUT_CHAN)+winner[i]];
-          out_wen  [i] = in_wen  [i*(NB_IN_CHAN/NB_OUT_CHAN)+winner[i]];
-          out_data [i] = in_data [i*(NB_IN_CHAN/NB_OUT_CHAN)+winner[i]];
-          out_be   [i] = in_be   [i*(NB_IN_CHAN/NB_OUT_CHAN)+winner[i]];
+          out_add  [i] = in_add  [i*(NB_IN_CHAN/NB_OUT_CHAN)+winner_d[i]];
+          out_wen  [i] = in_wen  [i*(NB_IN_CHAN/NB_OUT_CHAN)+winner_d[i]];
+          out_data [i] = in_data [i*(NB_IN_CHAN/NB_OUT_CHAN)+winner_d[i]];
+          out_be   [i] = in_be   [i*(NB_IN_CHAN/NB_OUT_CHAN)+winner_d[i]];
         end
       end /* non_interleaved_mux_req_gen */
 
       always_ff @(posedge clk_i or negedge rst_ni)
       begin : wta_resp_reg
         if(rst_ni == 1'b0) begin
-          last_winner[i] <= '0;
-          last_req   [i] <= 1'b0;
+          winner_q  [i] <= '0;
+          out_req_q [i] <= 1'b0;
         end
         else if(clear_i == 1'b1) begin
-          last_winner[i] <= '0;
-          last_req   [i] <= 1'b0;
+          winner_q  [i] <= '0;
+          out_req_q [i] <= 1'b0;
         end
         else begin
-          last_winner[i] <= winner    [i];
-          last_req   [i] <= out_req [i];
+          winner_q  [i] <= winner_d [i];
+          out_req_q [i] <= out_req  [i];
         end
       end
 
@@ -237,9 +237,9 @@ module hwpe_stream_tcdm_mux
             in_r_valid [j*NB_OUT_CHAN+i] = 1'b0;
             in_gnt     [j*NB_OUT_CHAN+i] = 1'b0;
           end
-          in_r_data  [last_winner[i]*NB_OUT_CHAN+i] = out_r_data[i];
-          in_r_valid [last_winner[i]*NB_OUT_CHAN+i] = out_r_valid[i] & last_req[i];
-          in_gnt     [winner[i]*NB_OUT_CHAN+i]      = out_gnt[i];
+          in_r_data  [winner_q[i]*NB_OUT_CHAN+i] = out_r_data[i];
+          in_r_valid [winner_q[i]*NB_OUT_CHAN+i] = out_r_valid[i] & out_req_q[i];
+          in_gnt     [winner_d[i]*NB_OUT_CHAN+i] = out_gnt[i];
         end
       end
 
@@ -254,9 +254,9 @@ module hwpe_stream_tcdm_mux
             in_r_valid [i*(NB_IN_CHAN/NB_OUT_CHAN)+j] = 1'b0;
             in_gnt     [i*(NB_IN_CHAN/NB_OUT_CHAN)+j] = 1'b0;
           end
-          in_r_data  [i*(NB_IN_CHAN/NB_OUT_CHAN)+last_winner[i]] = out_r_data[i];
-          in_r_valid [i*(NB_IN_CHAN/NB_OUT_CHAN)+last_winner[i]] = out_r_valid[i] & last_req[i];
-          in_gnt     [i*(NB_IN_CHAN/NB_OUT_CHAN)+winner[i]]      = out_gnt[i];
+          in_r_data  [i*(NB_IN_CHAN/NB_OUT_CHAN)+winner_q[i]] = out_r_data[i];
+          in_r_valid [i*(NB_IN_CHAN/NB_OUT_CHAN)+winner_q[i]] = out_r_valid[i] & out_req_q[i];
+          in_gnt     [i*(NB_IN_CHAN/NB_OUT_CHAN)+winner_d[i]] = out_gnt[i];
         end
       end
 

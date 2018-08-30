@@ -35,8 +35,8 @@ module hwpe_stream_source_realign #(
   hwpe_stream_intf_stream.source  pop_o
 );
 
-  logic [STRB_FIFO_DEPTH-1:0][DATA_WIDTH/8-1:0] strb_last_r, strb_first_r;
-  logic [STRB_FIFO_DEPTH-1:0] last_packet_r;
+  logic [STRB_FIFO_DEPTH-1:0][DATA_WIDTH/8-1:0] strb_last_fifo, strb_first_fifo;
+  logic [STRB_FIFO_DEPTH-1:0] last_packet_fifo;
   logic [DATA_WIDTH/8-1:0] int_strb;
 
   logic [$clog2(STRB_FIFO_DEPTH):0] strb_first_cnt;
@@ -74,7 +74,7 @@ module hwpe_stream_source_realign #(
 
       logic [15:0] word_cnt, next_word_cnt;
       logic [15:0] line_length_m1;
-      logic r_last_packet;
+      logic last_packet_q;
 
       assign line_length_m1 = (ctrl_i.realign == 1'b0) ? ctrl_i.line_length - 1 :
                                                          ctrl_i.line_length;                                        
@@ -122,25 +122,25 @@ module hwpe_stream_source_realign #(
       always_ff @(posedge clk_i or negedge rst_ni)
       begin
         if(~rst_ni) begin
-          strb_first_r <= '1;
+          strb_first_fifo <= '1;
           strb_first_cnt <= '0;
         end
         else if (clear_i) begin
-          strb_first_r <= '0;
+          strb_first_fifo <= '0;
           strb_first_cnt <= '0;
         end
         else begin
           if(ctrl_i.strb_valid & ctrl_i.first & push_i.valid & push_i.ready & int_first) begin
             strb_first_cnt <= strb_first_cnt;
-            strb_first_r[0] <= strb_i;
+            strb_first_fifo[0] <= strb_i;
             for(int i=1; i<STRB_FIFO_DEPTH; i++)
-              strb_first_r[i] <= strb_first_r[i-1];
+              strb_first_fifo[i] <= strb_first_fifo[i-1];
           end
           else if(ctrl_i.strb_valid & ctrl_i.first) begin
             strb_first_cnt <= strb_first_cnt + 1;
-            strb_first_r[0] <= strb_i;
+            strb_first_fifo[0] <= strb_i;
             for(int i=1; i<STRB_FIFO_DEPTH; i++)
-              strb_first_r[i] <= strb_first_r[i-1];
+              strb_first_fifo[i] <= strb_first_fifo[i-1];
           end
           else if(push_i.valid & push_i.ready & int_first) begin
             strb_first_cnt <= strb_first_cnt - 1;
@@ -151,31 +151,31 @@ module hwpe_stream_source_realign #(
       always_ff @(posedge clk_i or negedge rst_ni)
       begin
         if(~rst_ni) begin
-          strb_last_r  <= '1;
+          strb_last_fifo  <= '1;
           strb_last_cnt  <= '0;
-          last_packet_r <= '0;
+          last_packet_fifo <= '0;
         end
         else if (clear_i) begin
-          strb_last_r  <= '1;
+          strb_last_fifo  <= '1;
           strb_last_cnt  <= '0;
-          last_packet_r <= '0;
+          last_packet_fifo <= '0;
         end
         else begin
           if(ctrl_i.strb_valid & ctrl_i.last & push_i.valid & push_i.ready & int_last) begin
-            strb_last_r[0] <= strb_i;
-            last_packet_r[0] <= ctrl_i.last_packet;
+            strb_last_fifo[0] <= strb_i;
+            last_packet_fifo[0] <= ctrl_i.last_packet;
             for(int i=1; i<STRB_FIFO_DEPTH; i++) begin
-              strb_last_r[i] <= strb_last_r[i-1];
-              last_packet_r[i] <= last_packet_r[i-1];
+              strb_last_fifo[i] <= strb_last_fifo[i-1];
+              last_packet_fifo[i] <= last_packet_fifo[i-1];
             end
           end
           else if(ctrl_i.strb_valid & ctrl_i.last) begin
             strb_last_cnt <= strb_last_cnt + 1;
-            strb_last_r[0] <= strb_i;
-            last_packet_r[0] <= ctrl_i.last_packet;
+            strb_last_fifo[0] <= strb_i;
+            last_packet_fifo[0] <= ctrl_i.last_packet;
             for(int i=1; i<STRB_FIFO_DEPTH; i++) begin
-              strb_last_r[i] <= strb_last_r[i-1];
-              last_packet_r[i] <= last_packet_r[i-1];
+              strb_last_fifo[i] <= strb_last_fifo[i-1];
+              last_packet_fifo[i] <= last_packet_fifo[i-1];
             end
           end
           else if(push_i.valid & push_i.ready & int_last) begin
@@ -192,9 +192,9 @@ module hwpe_stream_source_realign #(
           if(ctrl_i.first & (strb_first_cnt == '0))
             int_strb = strb_i;
           else if(strb_first_cnt < 1)
-            int_strb = '0; // don't care
+            int_strb = 'x; // don't care
           else
-            int_strb = strb_first_r[strb_first_cnt-1];
+            int_strb = strb_first_fifo[strb_first_cnt-1];
         end
         else if(int_last) begin
           if(ctrl_i.last & (strb_last_cnt == '0)) begin
@@ -202,12 +202,12 @@ module hwpe_stream_source_realign #(
             int_last_packet = ctrl_i.last_packet;
           end
           else if(strb_last_cnt < 1) begin
-            int_strb = '1; // don't care
-            int_last_packet = '0; // don't care
+            int_strb = 'x; // don't care
+            int_last_packet = 'x; // don't care
           end
           else begin
-            int_strb = strb_last_r[strb_last_cnt-1];
-            int_last_packet = last_packet_r[strb_last_cnt-1];
+            int_strb = strb_last_fifo[strb_last_cnt-1];
+            int_last_packet = last_packet_fifo[strb_last_cnt-1];
           end
         end
       end

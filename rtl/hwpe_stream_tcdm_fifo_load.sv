@@ -36,8 +36,8 @@ module hwpe_stream_tcdm_fifo_load #(
 
   logic incoming_fifo_not_full;
 
-  logic        tcdm_master_r_valid_w, tcdm_master_r_valid_r;
-  logic [31:0] tcdm_master_r_data_w, tcdm_master_r_data_r;
+  logic        tcdm_master_r_valid_d, tcdm_master_r_valid_q;
+  logic [31:0] tcdm_master_r_data_d, tcdm_master_r_data_q;
 
   hwpe_stream_intf_stream #(
     .DATA_WIDTH ( 32 )
@@ -82,8 +82,8 @@ module hwpe_stream_tcdm_fifo_load #(
   );
 
   // wrap tcdm incoming ports into a stream
-  assign stream_incoming_push.data  = tcdm_master_r_valid_w ? tcdm_master_r_data_w : tcdm_master_r_data_r;
-  assign stream_incoming_push.valid = tcdm_master_r_valid_w | tcdm_master_r_valid_r;
+  assign stream_incoming_push.data  = tcdm_master_r_valid_d ? tcdm_master_r_data_d : tcdm_master_r_data_q;
+  assign stream_incoming_push.valid = tcdm_master_r_valid_d | tcdm_master_r_valid_q;
   assign stream_incoming_push.strb = '1;
 
   assign incoming_fifo_not_full = stream_incoming_push.ready;
@@ -93,33 +93,33 @@ module hwpe_stream_tcdm_fifo_load #(
   assign stream_incoming_pop.ready = ready_i;
 
   // enforce protocol on incoming stream
-  assign tcdm_master_r_data_w = tcdm_master.r_data;
-  assign tcdm_master_r_valid_w = tcdm_master.r_valid;
+  assign tcdm_master_r_data_d = tcdm_master.r_data;
+  assign tcdm_master_r_valid_d = tcdm_master.r_valid;
 
   always_ff @(posedge clk_i or negedge rst_ni)
   begin
     if(~rst_ni)
-      tcdm_master_r_valid_r <= 1'b0;
+      tcdm_master_r_valid_q <= 1'b0;
     else if(clear_i)
-      tcdm_master_r_valid_r <= 1'b0;
+      tcdm_master_r_valid_q <= 1'b0;
     else begin
-      if(tcdm_master_r_valid_w & stream_incoming_push.ready)
-        tcdm_master_r_valid_r <= 1'b0;
-      else if(tcdm_master_r_valid_w)
-        tcdm_master_r_valid_r <= 1'b1;
-      else if(tcdm_master_r_valid_r & stream_incoming_push.ready)
-        tcdm_master_r_valid_r <= 1'b0;
+      if(tcdm_master_r_valid_d & stream_incoming_push.ready)
+        tcdm_master_r_valid_q <= 1'b0;
+      else if(tcdm_master_r_valid_d)
+        tcdm_master_r_valid_q <= 1'b1;
+      else if(tcdm_master_r_valid_q & stream_incoming_push.ready)
+        tcdm_master_r_valid_q <= 1'b0;
     end
   end
 
   always_ff @(posedge clk_i or negedge rst_ni)
   begin
     if(~rst_ni)
-      tcdm_master_r_data_r <= '0;
+      tcdm_master_r_data_q <= '0;
     else if(clear_i)
-      tcdm_master_r_data_r <= '0;
-    else if(tcdm_master_r_valid_w)
-        tcdm_master_r_data_r <= tcdm_master_r_data_w;
+      tcdm_master_r_data_q <= '0;
+    else if(tcdm_master_r_valid_d)
+        tcdm_master_r_data_q <= tcdm_master_r_data_d;
   end
 
   hwpe_stream_fifo #(

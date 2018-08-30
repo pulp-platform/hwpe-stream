@@ -42,11 +42,6 @@ module hwpe_stream_tcdm_reorder_static
   localparam NB_IN_CHAN  = NB_CHAN;
   localparam NB_OUT_CHAN = NB_CHAN;
 
-  logic [NB_CHAN-1:0][$clog2(NB_CHAN)-1:0] rr_priority;
-  logic [NB_CHAN-1:0][$clog2(NB_CHAN)-1:0] winner;
-  logic [NB_CHAN-1:0][$clog2(NB_CHAN)-1:0] last_winner;
-  logic [NB_CHAN-1:0]                      last_req;
-
   logic [NB_CHAN-1:0]       in_req;
   logic [NB_CHAN-1:0][31:0] in_add;
   logic [NB_CHAN-1:0]       in_wen;

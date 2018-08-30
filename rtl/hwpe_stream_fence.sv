@@ -32,39 +32,39 @@ module hwpe_stream_fence #(
   logic [NB_STREAMS-1:0] in_valid;
   logic [NB_STREAMS-1:0] in_ready;
   logic                  out_valid;
-  logic [NB_STREAMS-1:0] fence_state, next_fence_state;
-  logic [NB_STREAMS-1:0][DATA_WIDTH-1:0]   r_data;
-  logic [NB_STREAMS-1:0][DATA_WIDTH/8-1:0] r_strb;
+  logic [NB_STREAMS-1:0] fence_state_q, fence_state_d;
+  logic [NB_STREAMS-1:0][DATA_WIDTH-1:0]   data_q;
+  logic [NB_STREAMS-1:0][DATA_WIDTH/8-1:0] strb_q;
 
   generate
     for(genvar ii=0; ii<NB_STREAMS; ii++) begin : binding
 
       assign in_valid[ii] = push_i[ii].valid;
 
-      assign push_i[ii].ready = pop_o[ii].ready & ~fence_state[ii];
+      assign push_i[ii].ready = pop_o[ii].ready & ~fence_state_q[ii];
 
       assign pop_o[ii].valid = out_valid;
-      assign pop_o[ii].data  = fence_state[ii] ? r_data[ii] : push_i[ii].data;
-      assign pop_o[ii].strb  = fence_state[ii] ? r_strb[ii] : push_i[ii].strb;
+      assign pop_o[ii].data  = fence_state_q[ii] ? data_q[ii] : push_i[ii].data;
+      assign pop_o[ii].strb  = fence_state_q[ii] ? strb_q[ii] : push_i[ii].strb;
 
       always_ff @(posedge clk_i or negedge rst_ni)
       begin
         if(~rst_ni)
-          r_data[ii] <= '0;
+          data_q[ii] <= '0;
         else if(clear_i)
-          r_data[ii] <= '0;
-        else if(next_fence_state[ii])
-          r_data[ii] <= push_i[ii].data;
+          data_q[ii] <= '0;
+        else if(fence_state_d[ii])
+          data_q[ii] <= push_i[ii].data;
       end
 
       always_ff @(posedge clk_i or negedge rst_ni)
       begin
         if(~rst_ni)
-          r_strb[ii] <= '0;
+          strb_q[ii] <= '0;
         else if(clear_i)
-          r_strb[ii] <= '0;
-        else if(next_fence_state[ii])
-          r_strb[ii] <= push_i[ii].strb;
+          strb_q[ii] <= '0;
+        else if(fence_state_d[ii])
+          strb_q[ii] <= push_i[ii].strb;
       end
 
     end
@@ -72,22 +72,22 @@ module hwpe_stream_fence #(
 
   always_comb
   begin
-    next_fence_state = '0;
+    fence_state_d = '0;
     out_valid = 1'b0;
-    if(&(in_valid | fence_state))
+    if(&(in_valid | fence_state_q))
       out_valid = 1'b1;
     else
-      next_fence_state = fence_state | in_valid;
+      fence_state_d = fence_state_q | in_valid;
   end
 
   always_ff @(posedge clk_i or negedge rst_ni)
   begin
     if(~rst_ni)
-      fence_state <= '0;
+      fence_state_q <= '0;
     else if(clear_i)
-      fence_state <= '0;
+      fence_state_q <= '0;
     else
-      fence_state <= next_fence_state;
+      fence_state_q <= fence_state_d;
   end
 
 endmodule // hwpe_stream_fence

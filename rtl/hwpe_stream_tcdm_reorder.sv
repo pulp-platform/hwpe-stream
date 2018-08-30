@@ -44,8 +44,8 @@ module hwpe_stream_tcdm_reorder
 
   logic [NB_CHAN-1:0][$clog2(NB_CHAN)-1:0] rr_priority;
   logic [NB_CHAN-1:0][$clog2(NB_CHAN)-1:0] winner;
-  logic [NB_CHAN-1:0][$clog2(NB_CHAN)-1:0] last_winner;
-  logic [NB_CHAN-1:0]                      last_req;
+  logic [NB_CHAN-1:0][$clog2(NB_CHAN)-1:0] winner_q;
+  logic [NB_CHAN-1:0]                      out_req_q;
 
   logic [NB_CHAN-1:0]       in_req;
   logic [NB_CHAN-1:0][31:0] in_add;
@@ -95,26 +95,26 @@ module hwpe_stream_tcdm_reorder
 
       always_comb
       begin : mux_req_comb
-        out_req   [i] = in_req   [winner[i]];
-        out_add   [i] = in_add   [winner[i]];
-        out_wen   [i] = in_wen   [winner[i]];
+        out_req   [i] = in_req  [winner[i]];
+        out_add   [i] = in_add  [winner[i]];
+        out_wen   [i] = in_wen  [winner[i]];
         out_data  [i] = in_data [winner[i]];
-        out_be    [i] = in_be    [winner[i]];
+        out_be    [i] = in_be   [winner[i]];
       end
 
       always_ff @(posedge clk_i or negedge rst_ni)
       begin : wta_resp_reg
         if(rst_ni == 1'b0) begin
-          last_winner[i] <= '0;
-          last_req   [i] <= 1'b0;
+          winner_q  [i] <= '0;
+          out_req_q [i] <= 1'b0;
         end
         else if(clear_i == 1'b1) begin
-          last_winner[i] <= '0;
-          last_req   [i] <= 1'b0;
+          winner_q  [i] <= '0;
+          out_req_q [i] <= 1'b0;
         end
         else begin
-          last_winner[i] <= winner    [i];
-          last_req   [i] <= out_req [i];
+          winner_q  [i] <= winner    [i];
+          out_req_q [i] <= out_req [i];
         end
       end
 
@@ -126,9 +126,9 @@ module hwpe_stream_tcdm_reorder
         in_r_data[i] = '0;
         in_r_valid[i] = 1'b0;
         in_gnt  [i] = 1'b0;
-        in_r_data[last_winner[i]] = out_r_data[i];
-        in_r_valid[last_winner[i]] = out_r_valid[i] & last_req[i];
-        in_gnt  [winner[i]] = out_gnt[i];
+        in_r_data [winner_q[i]] = out_r_data[i];
+        in_r_valid[winner_q[i]] = out_r_valid[i] & out_req_q[i];
+        in_gnt    [winner[i]] = out_gnt[i];
       end
     end
 

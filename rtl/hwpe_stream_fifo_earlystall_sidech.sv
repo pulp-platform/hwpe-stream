@@ -42,8 +42,8 @@ module hwpe_stream_fifo_earlystall_sidech #(
   enum logic [1:0] { EMPTY, FULL, MIDDLE } cs, ns;
 
   // internal signals
-  logic [ADDR_DEPTH-1:0] pop_pointer_cs,  pop_pointer_ns;
-  logic [ADDR_DEPTH-1:0] push_pointer_cs, push_pointer_ns;
+  logic [ADDR_DEPTH-1:0] pop_pointer_q,  pop_pointer_d;
+  logic [ADDR_DEPTH-1:0] push_pointer_q, push_pointer_d;
   logic [DATA_WIDTH+DATA_WIDTH/8+SIDECH_WIDTH-1:0] fifo_registers[FIFO_DEPTH-1:0];
   integer       i;
 
@@ -53,19 +53,19 @@ module hwpe_stream_fifo_earlystall_sidech #(
   always_ff @(posedge clk_i, negedge rst_ni)
   begin
     if(rst_ni == 1'b0) begin
-      cs              <= EMPTY;
-      pop_pointer_cs  <= '0;
-      push_pointer_cs <= '0;
+      cs             <= EMPTY;
+      pop_pointer_q  <= '0;
+      push_pointer_q <= '0;
     end
     else if(clear_i == 1'b1) begin
-      cs              <= EMPTY;
-      pop_pointer_cs  <= '0;
-      push_pointer_cs <= '0;
+      cs             <= EMPTY;
+      pop_pointer_q  <= '0;
+      push_pointer_q <= '0;
     end
     else begin
-      cs              <= ns;
-      pop_pointer_cs  <= pop_pointer_ns;
-      push_pointer_cs <= push_pointer_ns;
+      cs             <= ns;
+      pop_pointer_q  <= pop_pointer_d;
+      push_pointer_q <= push_pointer_d;
     end
   end
 
@@ -79,25 +79,25 @@ module hwpe_stream_fifo_earlystall_sidech #(
         case(push_i.valid)
           1'b0 : begin
             ns = EMPTY;
-            push_pointer_ns = push_pointer_cs;
-            pop_pointer_ns  = pop_pointer_cs;
+            push_pointer_d = push_pointer_q;
+            pop_pointer_d  = pop_pointer_q;
           end
           1'b1: begin
             ns = MIDDLE;
-            push_pointer_ns = push_pointer_cs + 1'b1;
-            pop_pointer_ns  = pop_pointer_cs;
+            push_pointer_d = push_pointer_q + 1'b1;
+            pop_pointer_d  = pop_pointer_q;
           end
         endcase
       end
       MIDDLE: begin
-        if(push_pointer_cs > pop_pointer_cs) begin
-          if(push_pointer_cs - pop_pointer_cs  < FIFO_DEPTH-2)
+        if(push_pointer_q > pop_pointer_q) begin
+          if(push_pointer_q - pop_pointer_q  < FIFO_DEPTH-2)
             push_i.ready = 1'b1;
           else
             push_i.ready = 1'b0;
         end
         else begin
-          if(pop_pointer_cs - push_pointer_cs   > 1)
+          if(pop_pointer_q - push_pointer_q   > 1)
             push_i.ready = 1'b1;
           else
             push_i.ready = 1'b0;
@@ -105,42 +105,42 @@ module hwpe_stream_fifo_earlystall_sidech #(
         pop_o.valid = 1'b1;
         case({push_i.valid,pop_o.ready})
           2'b01: begin
-            if((pop_pointer_cs == push_pointer_cs -1 ) || ((pop_pointer_cs == FIFO_DEPTH-1) && (push_pointer_cs == 0) ))
+            if((pop_pointer_q == push_pointer_q -1 ) || ((pop_pointer_q == FIFO_DEPTH-1) && (push_pointer_q == 0) ))
               ns = EMPTY;
             else
               ns = MIDDLE;
-            push_pointer_ns = push_pointer_cs;
-            if(pop_pointer_cs == FIFO_DEPTH-1)
-              pop_pointer_ns  = 0;
+            push_pointer_d = push_pointer_q;
+            if(pop_pointer_q == FIFO_DEPTH-1)
+              pop_pointer_d  = 0;
             else
-              pop_pointer_ns  = pop_pointer_cs + 1'b1;
+              pop_pointer_d  = pop_pointer_q + 1'b1;
           end
           2'b00 : begin
               ns = MIDDLE;
-              push_pointer_ns = push_pointer_cs;
-              pop_pointer_ns  = pop_pointer_cs;
+              push_pointer_d = push_pointer_q;
+              pop_pointer_d  = pop_pointer_q;
           end
           2'b11: begin
               ns = MIDDLE;
-              if(push_pointer_cs == FIFO_DEPTH-1)
-                push_pointer_ns = 0;
+              if(push_pointer_q == FIFO_DEPTH-1)
+                push_pointer_d = 0;
               else
-                push_pointer_ns = push_pointer_cs + 1'b1;
-              if(pop_pointer_cs == FIFO_DEPTH-1)
-                pop_pointer_ns  = 0;
+                push_pointer_d = push_pointer_q + 1'b1;
+              if(pop_pointer_q == FIFO_DEPTH-1)
+                pop_pointer_d  = 0;
               else
-                pop_pointer_ns  = pop_pointer_cs  + 1'b1;
+                pop_pointer_d  = pop_pointer_q  + 1'b1;
           end
           2'b10: begin
-            if(( push_pointer_cs == pop_pointer_cs - 1) || ( (push_pointer_cs == FIFO_DEPTH-1) && (pop_pointer_cs == 0) ))
+            if(( push_pointer_q == pop_pointer_q - 1) || ( (push_pointer_q == FIFO_DEPTH-1) && (pop_pointer_q == 0) ))
               ns = FULL;
             else
               ns = MIDDLE;
-            if(push_pointer_cs == FIFO_DEPTH - 1)
-              push_pointer_ns = 0;
+            if(push_pointer_q == FIFO_DEPTH - 1)
+              push_pointer_d = 0;
             else
-              push_pointer_ns = push_pointer_cs + 1'b1;
-            pop_pointer_ns  = pop_pointer_cs;
+              push_pointer_d = push_pointer_q + 1'b1;
+            pop_pointer_d  = pop_pointer_q;
           end
         endcase
       end
@@ -150,16 +150,16 @@ module hwpe_stream_fifo_earlystall_sidech #(
         case(pop_o.ready)
           1'b1: begin
             ns = MIDDLE;
-            push_pointer_ns = push_pointer_cs;
-            if(pop_pointer_cs == FIFO_DEPTH-1)
-              pop_pointer_ns  = 0;
+            push_pointer_d = push_pointer_q;
+            if(pop_pointer_q == FIFO_DEPTH-1)
+              pop_pointer_d  = 0;
             else
-              pop_pointer_ns  = pop_pointer_cs  + 1'b1;
+              pop_pointer_d  = pop_pointer_q  + 1'b1;
           end
           1'b0: begin
             ns = FULL;
-            push_pointer_ns = push_pointer_cs;
-            pop_pointer_ns  = pop_pointer_cs;
+            push_pointer_d = push_pointer_q;
+            pop_pointer_d  = pop_pointer_q;
           end
         endcase
       end
@@ -167,8 +167,8 @@ module hwpe_stream_fifo_earlystall_sidech #(
         push_i.ready = 1'b0;
         pop_o.valid = 1'b0;
         ns = EMPTY;
-        pop_pointer_ns = 0;
-        push_pointer_ns = 0;
+        pop_pointer_d = 0;
+        push_pointer_d = 0;
       end
     endcase
   end
@@ -191,11 +191,11 @@ module hwpe_stream_fifo_earlystall_sidech #(
         end
         else begin
           if(push_i.valid == 1'b1)
-            fifo_registers[push_pointer_cs] <= { sidech_i, push_i.data, push_i.strb };
+            fifo_registers[push_pointer_q] <= { sidech_i, push_i.data, push_i.strb };
         end
       end
 
-      assign data_out_int = fifo_registers[pop_pointer_cs];
+      assign data_out_int = fifo_registers[pop_pointer_q];
 
     end
     else begin : fifo_latch_gen
@@ -207,13 +207,13 @@ module hwpe_stream_fifo_earlystall_sidech #(
         .DATA_WIDTH( DATA_WIDTH+DATA_WIDTH/8+SIDECH_WIDTH )
       ) i_fifo_latch (
         .clk ( clk_i ),
-        .rst_n       ( rst_ni          ),
-        .ReadEnable  ( 1'b1            ),
-        .ReadAddr    ( pop_pointer_ns  ),
-        .ReadData    ( data_out_int    ),
-        .WriteEnable ( push_i.valid    ),
-        .WriteAddr   ( push_pointer_cs ),
-        .WriteData   ( data_in_int     )   
+        .rst_n       ( rst_ni         ),
+        .ReadEnable  ( 1'b1           ),
+        .ReadAddr    ( pop_pointer_d  ),
+        .ReadData    ( data_out_int   ),
+        .WriteEnable ( push_i.valid   ),
+        .WriteAddr   ( push_pointer_q ),
+        .WriteData   ( data_in_int    )
       );
 
     end

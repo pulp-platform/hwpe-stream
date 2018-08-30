@@ -55,7 +55,7 @@ module hwpe_stream_source
   logic [DATA_WIDTH -1:0] data_packed;
   logic [DATA_WIDTH -1:0] data_int;
 
-  logic [15:0] overall_cnt, next_overall_cnt;
+  logic [15:0] overall_cnt_q, overall_cnt_d;
   logic overall_none;
 
   logic [NB_TCDM_PORTS-1:0] fence_hs;
@@ -190,8 +190,8 @@ module hwpe_stream_source
     end
 
     for(genvar ii=0; ii<NB_TCDM_PORTS; ii++) begin: tcdm_binding
-      logic        stream_valid_w, stream_valid_r;
-      logic [31:0] stream_data_w,  stream_data_r;
+      logic        stream_valid_d, stream_valid_q;
+      logic [31:0] stream_data_d,  stream_data_q;
 
       assign tcdm_fifo_ready_o[ii] = split_streams[ii].ready;
       assign tcdm[ii].req  = tcdm_int_req & ~fence_hs[ii];
@@ -201,36 +201,36 @@ module hwpe_stream_source
       assign tcdm[ii].data = '0; 
       assign tcdm_split_gnt[ii] = tcdm[ii].gnt | fence_hs[ii];
       assign split_streams[ii].strb  = '1;
-      assign split_streams[ii].data  = stream_valid_w ? stream_data_w : stream_data_r;
-      assign split_streams[ii].valid = stream_valid_w | stream_valid_r;
+      assign split_streams[ii].data  = stream_valid_d ? stream_data_d : stream_data_q;
+      assign split_streams[ii].valid = stream_valid_d | stream_valid_q;
 
-      assign stream_data_w  = tcdm[ii].r_data;
-      assign stream_valid_w = tcdm[ii].r_valid;
+      assign stream_data_d  = tcdm[ii].r_data;
+      assign stream_valid_d = tcdm[ii].r_valid;
 
       always_ff @(posedge clk_i or negedge rst_ni)
       begin
         if(~rst_ni)
-          stream_valid_r <= 1'b0;
+          stream_valid_q <= 1'b0;
         else if(clear_i)
-          stream_valid_r <= 1'b0;
+          stream_valid_q <= 1'b0;
         else begin
-          if(stream_valid_w & split_streams[ii].ready)
-            stream_valid_r <= 1'b0;
-          else if(stream_valid_w)
-            stream_valid_r <= 1'b1;
-          else if(stream_valid_r & split_streams[ii].ready)
-            stream_valid_r <= 1'b0;
+          if(stream_valid_d & split_streams[ii].ready)
+            stream_valid_q <= 1'b0;
+          else if(stream_valid_d)
+            stream_valid_q <= 1'b1;
+          else if(stream_valid_q & split_streams[ii].ready)
+            stream_valid_q <= 1'b0;
         end
       end
 
       always_ff @(posedge clk_i or negedge rst_ni)
       begin
         if(~rst_ni)
-          stream_data_r <= '0;
+          stream_data_q <= '0;
         else if(clear_i)
-          stream_data_r <= '0;
-        else if(stream_valid_w)
-            stream_data_r <= stream_data_w;
+          stream_data_q <= '0;
+        else if(stream_valid_d)
+            stream_data_q <= stream_data_d;
       end
 
     end
@@ -306,7 +306,7 @@ module hwpe_stream_source
               if(flags_o.addressgen_flags.in_progress == 1'b1) begin
                 ns = STREAM_WORKING;
               end
-              else if(overall_none == 1'b1 || overall_cnt != '0) begin
+              else if(overall_none == 1'b1 || overall_cnt_q != '0) begin
                 ns = STREAM_DONE;
                 address_gen_en = 1'b0;
               end
@@ -317,7 +317,7 @@ module hwpe_stream_source
           end
           STREAM_DONE: begin
             ns = STREAM_DONE;
-            if(overall_none == 1'b0 && overall_cnt == '0) begin
+            if(overall_none == 1'b0 && overall_cnt_q == '0) begin
               ns = STREAM_IDLE;
               done = 1'b1;
               address_gen_clr = 1'b1;
@@ -333,27 +333,27 @@ module hwpe_stream_source
 
       always_comb
       begin
-        next_overall_cnt = overall_cnt;
+        overall_cnt_d = overall_cnt_q;
         if(cs == STREAM_IDLE)
-          next_overall_cnt = '0;
+          overall_cnt_d = '0;
         else if(stream.valid & stream.ready) begin
-          next_overall_cnt = overall_cnt + 1;
+          overall_cnt_d = overall_cnt_q + 1;
         end
-        if((stream.valid & stream.ready) && overall_cnt == ctrl_i.addressgen_ctrl.trans_size-1) begin
-          next_overall_cnt = '0;
+        if((stream.valid & stream.ready) && overall_cnt_q == ctrl_i.addressgen_ctrl.trans_size-1) begin
+          overall_cnt_d = '0;
         end
       end
 
       always_ff @(posedge clk_i or negedge rst_ni)
       begin
         if(~rst_ni) begin
-          overall_cnt <= '0;
+          overall_cnt_q <= '0;
         end
         else if(clear_i) begin
-          overall_cnt <= '0;
+          overall_cnt_q <= '0;
         end
         else begin
-          overall_cnt <= next_overall_cnt;
+          overall_cnt_q <= overall_cnt_d;
         end
       end
 
