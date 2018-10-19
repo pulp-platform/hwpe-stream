@@ -120,7 +120,7 @@ module hwpe_stream_source
     .test_mode_i( test_mode_i                            ),
     .clear_i    ( clear_i                                ),
     .ctrl_i     ( flags_o.addressgen_flags.realign_flags ),
-    .flags_o    (),
+    .flags_o    (                                        ),
     .strb_i     ( gen_strb                               ),
     .push_i     ( misaligned_fifo_stream                 ),
     .pop_o      ( stream                                 )
