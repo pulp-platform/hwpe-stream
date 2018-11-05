@@ -19,7 +19,7 @@ package hwpe_stream_package;
   parameter int unsigned HWPE_STREAM_REALIGN_SOURCE = 0;
   parameter int unsigned HWPE_STREAM_REALIGN_SINK   = 1;
 
-  // addressgen related types  
+  // addressgen related types
   typedef struct packed {
     logic [31:0] base_addr;
     logic [31:0] trans_size;
@@ -57,9 +57,12 @@ package hwpe_stream_package;
 
   typedef struct packed {
     logic empty;
+    logic full;
+    logic [7:0] push_pointer;
+    logic [7:0] pop_pointer;
   } flags_fifo_t;
 
-  // source/sink related types  
+  // source/sink related types
   typedef struct packed {
     logic             req_start;
     ctrl_addressgen_t addressgen_ctrl;
