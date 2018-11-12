@@ -285,6 +285,7 @@ module hwpe_stream_addressgen
   assign flags.realign_flags.first   = misalignment_first;
   assign flags.realign_flags.last    = misalignment_last;
   assign flags.realign_flags.line_length = ctrl_i.line_length;
+  assign flags.realign_flags.strb_valid = '1;
 
   generate
 
