@@ -9,7 +9,7 @@ This repository contains the following IPs:
  - *fence*: synchronizes handshakes between a set of streams
  - *buffer*: delays a stream by 1 cycle (for timing purposes)
 
-**fifo** - FIFO decupling queues for HWPE-Streams:
+**fifo** - FIFO decoupling queues for HWPE-Streams:
  - *fifo*: parametric FIFO
  - *fifo\_sidech*: parametric FIFO (with side channel)
  - *fifo\_earlystall*: parametric FIFO stalling one cycle before being full
