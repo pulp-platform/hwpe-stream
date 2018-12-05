@@ -1,4 +1,4 @@
-/* 
+/*
  * tb_dummy_memory.sv
  * Francesco Conti <fconti@iis.ee.ethz.ch>
  *
@@ -26,7 +26,8 @@ module tb_dummy_memory
   parameter PROB_STALL  = 0.0,
   parameter TCP         = 1.0ns, // clock period, 1GHz clock
   parameter TA          = 0.2ns, // application time
-  parameter TT          = 0.8ns  // test time
+  parameter TT          = 0.8ns, // test time
+  parameter INSTRUMENTATION = 1
 )
 (
   input  logic                clk_i,
@@ -37,6 +38,11 @@ module tb_dummy_memory
 
   logic [MEMORY_SIZE-1:0][31:0] memory;
   int cnt = 0;
+
+  int cnt_req  [MP-1:0] = '0;
+  int cnt_rval [MP-1:0] = '0;
+  int cnt_wr   [MP-1:0] = '0;
+  int cnt_rd   [MP-1:0] = '0;
 
   logic [MP-1:0]       tcdm_req;
   logic [MP-1:0]       tcdm_gnt;
@@ -130,5 +136,22 @@ module tb_dummy_memory
     tcdm_r_data  <= tcdm_r_data_int;
     tcdm_r_valid <= tcdm_r_valid_int;
   end
+
+  generate;
+    if(INSTRUMENTATION) begin
+      for(genvar ii=0; ii<MP; ii++) begin
+        always begin
+          if(tcdm_req[ii])
+            cnt_req[ii] ++;
+          if(tcdm_r_valid[ii])
+            cnt_rval[ii] ++;
+          if(tcdm_req[ii] & tcdm_gnt[ii] & ~tcdm_wen[ii])
+            cnt_wr[ii] ++;
+          if(tcdm_req[ii] & tcdm_gnt[ii] & tcdm_wen[ii])
+            cnt_rd[ii] ++;
+        end
+      end
+    end
+  endgenerate
 
 endmodule // tb_dummy_memory
