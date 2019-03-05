@@ -97,7 +97,8 @@ module hwpe_stream_source
   hwpe_stream_addressgen #(
     .STEP         ( NB_TCDM_PORTS*4            ),
     .TRANS_CNT    ( TRANS_CNT                  ),
-    .REALIGN_TYPE ( HWPE_STREAM_REALIGN_SOURCE )
+    .REALIGN_TYPE ( HWPE_STREAM_REALIGN_SOURCE ),
+    .DECOUPLED    ( DECOUPLED                  )
   ) i_addressgen (
     .clk_i          ( clk_i                    ),
     .rst_ni         ( rst_ni                   ),

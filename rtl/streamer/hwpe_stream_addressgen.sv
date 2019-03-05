@@ -18,6 +18,7 @@ import hwpe_stream_package::*;
 module hwpe_stream_addressgen
 #(
   parameter int unsigned REALIGN_TYPE = HWPE_STREAM_REALIGN_SOURCE,
+  parameter int unsigned DECOUPLED    = 0,
   parameter int unsigned STEP         = 4,
   parameter int unsigned TRANS_CNT    = 16,
   parameter int unsigned CNT          = 10, // number of bits used within the internal counter
@@ -232,22 +233,54 @@ module hwpe_stream_addressgen
     end
   end
 
-  always_ff @(posedge clk_i or negedge rst_ni)
-  begin
-    if (rst_ni==1'b0)
-      flags.in_progress <= 1'b1;
-    else if (clear_i==1'b1)
-      flags.in_progress <= 1'b1;
-    else
-      if(trans_size_m2 == '1)
-        flags.in_progress <= ((overall_counter == '0) ? 1'b1 : 1'b0);
-      else if (overall_counter < trans_size_m2)
-        flags.in_progress <= 1'b1;
-      else if ((overall_counter == trans_size_m2) && (enable_int == 1'b0))
-        flags.in_progress <= 1'b1;
-      else
-        flags.in_progress <= 1'b0;
-  end
+  logic trans_size_m2_is_ffff;
+  assign trans_size_m2_is_ffff = (trans_size_m2 == '1) ? 1'b1 : 1'b0;
+
+  logic overall_counter_is_0;
+  assign overall_counter_is_0 = (overall_counter == '0) ? 1'b1 : 1'b0;
+
+  logic pippo;
+
+  generate
+    if((DECOUPLED == 0) && (REALIGN_TYPE == HWPE_STREAM_REALIGN_SOURCE)) begin
+      assign pippo = 1'b1;
+      always_ff @(posedge clk_i or negedge rst_ni)
+      begin
+        if (rst_ni==1'b0)
+          flags.in_progress <= 1'b1;
+        else if (clear_i==1'b1)
+          flags.in_progress <= 1'b1;
+        else
+          if(trans_size_m2 == '1)
+            flags.in_progress <= 1'b0;
+          else if (overall_counter < trans_size_m2)
+            flags.in_progress <= 1'b1;
+          else if ((overall_counter == trans_size_m2) && (enable_int == 1'b0))
+            flags.in_progress <= 1'b1;
+          else
+            flags.in_progress <= 1'b0;
+      end
+    end
+    else begin
+      assign pippo = 1'b0;
+      always_ff @(posedge clk_i or negedge rst_ni)
+      begin
+        if (rst_ni==1'b0)
+          flags.in_progress <= 1'b1;
+        else if (clear_i==1'b1)
+          flags.in_progress <= 1'b1;
+        else
+          if(trans_size_m2_is_ffff)
+            flags.in_progress <= overall_counter_is_0;
+          else if (overall_counter < trans_size_m2)
+            flags.in_progress <= 1'b1;
+          else if ((overall_counter == trans_size_m2) && (enable_int == 1'b0))
+            flags.in_progress <= 1'b1;
+          else
+            flags.in_progress <= 1'b0;
+      end
+    end
+  endgenerate
 
   assign gen_addr_int = base_addr + feat_addr + line_addr + word_addr;
 
@@ -266,7 +299,7 @@ module hwpe_stream_addressgen
   end
 
   assign gen_addr_o = { gen_addr_int[31:2] , 2'b0 };
-  
+
   always_comb
   begin
     gen_strb_int = '1;
