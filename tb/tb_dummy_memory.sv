@@ -39,10 +39,10 @@ module tb_dummy_memory
   logic [MEMORY_SIZE-1:0][31:0] memory;
   int cnt = 0;
 
-  int cnt_req  [MP-1:0] = '0;
-  int cnt_rval [MP-1:0] = '0;
-  int cnt_wr   [MP-1:0] = '0;
-  int cnt_rd   [MP-1:0] = '0;
+  int cnt_req  [MP-1:0];
+  int cnt_rval [MP-1:0];
+  int cnt_wr   [MP-1:0];
+  int cnt_rd   [MP-1:0];
 
   logic [MP-1:0]       tcdm_req;
   logic [MP-1:0]       tcdm_gnt;
@@ -83,11 +83,12 @@ module tb_dummy_memory
       assign tcdm[ii].r_valid = tcdm_r_valid [ii];
     end
 
-    for(genvar i=0; i<MEMORY_SIZE; i++) begin : outer
-      always_ff @(posedge clk_i)
-      begin
-        if(randomize_i)
+    always_ff @(posedge clk_i)
+    begin
+      if(randomize_i) begin
+        for(int i=0; i<MEMORY_SIZE; i++) begin
           memory[i] = $random();
+        end
       end
     end
 
@@ -141,14 +142,22 @@ module tb_dummy_memory
     if(INSTRUMENTATION) begin
       for(genvar ii=0; ii<MP; ii++) begin
         always begin
-          if(tcdm_req[ii])
-            cnt_req[ii] ++;
-          if(tcdm_r_valid[ii])
-            cnt_rval[ii] ++;
-          if(tcdm_req[ii] & tcdm_gnt[ii] & ~tcdm_wen[ii])
-            cnt_wr[ii] ++;
-          if(tcdm_req[ii] & tcdm_gnt[ii] & tcdm_wen[ii])
-            cnt_rd[ii] ++;
+          if(~enable_i) begin
+            cnt_req  [ii] = 0;
+            cnt_rval [ii] = 0;
+            cnt_wr   [ii] = 0;
+            cnt_rd   [ii] = 0;
+          end
+          else begin
+            if(tcdm_req[ii])
+              cnt_req[ii] ++;
+            if(tcdm_r_valid[ii])
+              cnt_rval[ii] ++;
+            if(tcdm_req[ii] & tcdm_gnt[ii] & ~tcdm_wen[ii])
+              cnt_wr[ii] ++;
+            if(tcdm_req[ii] & tcdm_gnt[ii] & tcdm_wen[ii])
+              cnt_rd[ii] ++;
+          end
         end
       end
     end
