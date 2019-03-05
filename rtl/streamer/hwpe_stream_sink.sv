@@ -132,7 +132,8 @@ module hwpe_stream_sink
           .rst_ni      ( rst_ni            ),
           .clear_i     ( clear_i           ),
           .tcdm_slave  ( tcdm_prefifo [ii] ),
-          .tcdm_master ( tcdm [ii]         )
+          .tcdm_master ( tcdm [ii]         ),
+          .flags_o     (                   )
         );
 
       end
