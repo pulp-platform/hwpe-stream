@@ -13,6 +13,19 @@
  * specific language governing permissions and limitations under the License.
  */
 
+/**
+ * The **hwpe_stream_fence** module is used to synchronize the handshake between
+ * `NB_STREAMS` streams.
+ * This is necessary, for example, when multiple 32-bit streams are produced
+ * from separate TCDM accesses and have to be joined into a single, wider
+ * stream.
+ *
+ * .. _wavedrom_hwpe_stream_fence:
+ * .. wavedrom:: wavedrom/hwpe_stream_fence.json
+ *   :width: 70 %
+ *   :caption: Example of **hwpe_stream_fence** operation.
+ */
+
 import hwpe_stream_package::*;
 
 module hwpe_stream_fence #(

@@ -1,0 +1,17 @@
+{
+  "foot" : {
+    "tock" : 1
+  },
+  "config" : {
+    "hscale" : 2
+  },
+  "signal" : [
+    { "name": "clk_i",  "wave": "p..."},
+    [
+      "stream",
+      { "name" : "valid", "wave": "01.0"},
+      { "name" : "ready", "wave": "0.10"},
+      { "name" : "data",  "wave": "x34x", "data": ["0xDE", "0xAD", "0xBE", "0xEF", "0x0B"]}
+    ]
+  ]
+}

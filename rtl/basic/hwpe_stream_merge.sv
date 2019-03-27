@@ -13,6 +13,25 @@
  * specific language governing permissions and limitations under the License.
  */
 
+/**
+ * The **hwpe_stream_merge** module is used to merge `NB_IN_STREAMS` 32-bit
+ * input streams into a single, bigger stream. The *data* and *strb*
+ * channels from the input streams are bound in order and the *valid* is
+ * generated as the AND of all *valid*'s from input streams. The *ready*
+ * is broadcasted from the output stream to all input streams.
+ *
+ * A typical use of this module is to take `NB_IN_STREAMS` 32-bit streams
+ * coming from a TCDM load interface to be merged into a single bigger
+ * stream.
+ *
+ * The following shows an example of the **hwpe_stream_merge** operation:
+ *
+ * .. _wavedrom_hwpe_stream_merge:
+ * .. wavedrom:: wavedrom/hwpe_stream_merge.json
+ *   :width: 70 %
+ *   :caption: Example of **hwpe_stream_merge** operation.
+ */
+
 import hwpe_stream_package::*;
 
 module hwpe_stream_merge #(
@@ -23,7 +42,7 @@ module hwpe_stream_merge #(
   input  logic                   clk_i,
   input  logic                   rst_ni,
   input  logic                   clear_i,
-  
+
   hwpe_stream_intf_stream.sink   push_i [NB_IN_STREAMS-1:0],
   hwpe_stream_intf_stream.source pop_o
 );

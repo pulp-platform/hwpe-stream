@@ -1,4 +1,4 @@
-/* 
+/*
  * hwpe_stream_mux_static.sv
  * Francesco Conti <f.conti@unibo.it>
  *
@@ -11,10 +11,21 @@
  * this License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
+ */
+
+/**
+ * The **hwpe_stream_mux_static** module is used to statically propagate
+ * one of 2 input streams of size `DATA_SIZE` into a single output stream.
+ * The multiplexer is static as the selection bit `sel_i` *cannot be changed* when
+ * there are transactions in flight; if the selection bit is changed when
+ * transactions are in flight, the result is undefined.
  *
- * The TCDM static multiplexer is used in place of the dynamic one
- * when two sets of ports are guaranteed to be used in a strictly
- * alternative fashion.
+ * The following shows an example of the **hwpe_stream_mux_static** operation:
+ *
+ * .. _wavedrom_hwpe_stream_mux_static:
+ * .. wavedrom:: wavedrom/hwpe_stream_mux_static.json
+ *   :width: 70 %
+ *   :caption: Example of **hwpe_stream_mux_static** operation.
  */
 
 import hwpe_stream_package::*;

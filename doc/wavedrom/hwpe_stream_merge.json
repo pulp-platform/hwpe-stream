@@ -1,0 +1,29 @@
+{
+  "foot" : {
+    "tock" : 1
+  },
+  "config" : {
+    "hscale" : 2
+  },
+  "signal" : [
+    { "name": "clk_i",  "wave": "p........"},
+    [
+      "push_i[0]",
+      { "name" : "valid", "wave": "0.1.01010"},
+      { "name" : "ready", "wave": "1.....010"},
+      { "name" : "data",  "wave": "x.43x5x4x", "data": ["0xAD", "0xF0", "0x0D", "0xD0"]}
+    ],
+    [
+      "push_i[1]",
+      { "name" : "valid", "wave": "0.1.0101."},
+      { "name" : "ready", "wave": "0.1...010"},
+      { "name" : "data",  "wave": "x.35x4x5x", "data": ["0xDE", "0xAD", "0xBE", "0xEF"]}
+    ],
+    [
+      "pop_o",
+      { "name" : "valid", "wave": "0.1.01010"},
+      { "name" : "ready", "wave": "1.....010"},
+      { "name" : "data",  "wave": "x.54x3x3x", "data": ["0xDEAD", "0xADF0", "0xBE0D", "0xEFD0"]}
+    ]
+  ]
+}

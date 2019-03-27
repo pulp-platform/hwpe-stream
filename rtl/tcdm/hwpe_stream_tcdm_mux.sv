@@ -11,8 +11,10 @@
  * this License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
- *
- * The TCDM multiplexer can be used to funnel more input "virtual"
+ */
+
+/**
+ * The **TCDM multiplexer** can be used to funnel more input "virtual"
  * TCDM channels into a smaller set of master ports.
  * It uses a round robin counter to avoid starvation, and differs
  * from the modules used within the logarithmic interconnect in
@@ -20,6 +22,8 @@
  * counter and not on the slave port; in other words, its task is
  * to fill all out ports with requests from the in port, and not
  * to route in requests to a specific out port.
+ *
+ * That is its purpose.
  */
 
 import hwpe_stream_package::*;
