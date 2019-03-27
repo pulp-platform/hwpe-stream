@@ -22,8 +22,20 @@
  *
  * .. _wavedrom_hwpe_stream_fence:
  * .. wavedrom:: wavedrom/hwpe_stream_fence.json
- *   :width: 70 %
+ *   :width: 85 %
  *   :caption: Example of **hwpe_stream_fence** operation.
+ *
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_fence_params:
+ * .. table:: **hwpe_stream_fence** design-time parameters.
+ *
+ *   +------------------+-------------+---------------------------------------------+
+ *   | **Name**         | **Default** | **Description**                             |
+ *   +------------------+-------------+---------------------------------------------+
+ *   | *NB_STREAMS*     | 2           | Number of input/output HWPE-Stream streams. |
+ *   +------------------+-------------+---------------------------------------------+
+ *   | *DATA_WIDTH*     | 32          | Width of the HWPE-Stream streams.           |
+ *   +------------------+-------------+---------------------------------------------+
  */
 
 import hwpe_stream_package::*;

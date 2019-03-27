@@ -25,8 +25,18 @@
  *
  * .. _wavedrom_hwpe_stream_demux_static:
  * .. wavedrom:: wavedrom/hwpe_stream_demux_static.json
- *   :width: 70 %
+ *   :width: 85 %
  *   :caption: Example of **hwpe_stream_demux_static** operation.
+ *
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_demux_static_params:
+ * .. table:: **hwpe_stream_demux_static** design-time parameters.
+ *
+ *   +------------------+-------------+---------------------------------------+
+ *   | **Name**         | **Default** | **Description**                       |
+ *   +------------------+-------------+---------------------------------------+
+ *   | *NB_OUT_STREAMS* | 2           | Number of output HWPE-Stream streams. |
+ *   +------------------+-------------+---------------------------------------+
  */
 
 import hwpe_stream_package::*;

@@ -47,14 +47,14 @@ Document Revisions
 |                 |                 |                 | constraints on   |
 |                 |                 |                 | TCDM prot.       |
 +-----------------+-----------------+-----------------+------------------+
-| 1.4             | 03/03/19        | Francesco Conti | Switched to RST; |
-|                 |                 |                 | added SW events. |
+| 1.4             | 27/03/19        | Francesco Conti | Switched to RST; |
+|                 |                 |                 | major rehaul.    |
 +-----------------+-----------------+-----------------+------------------+
 
 
-*****************************
-HWPE Interface Specifications
-*****************************
+************************
+HWPE Interface Protocols
+************************
 
 Introduction
 ============
@@ -91,11 +91,8 @@ divided in a **streamer** interface towards the memory system, a
 **control/peripheral** interface used for programming it, and an
 **engine** containing the actual datapath of the accelerator.
 
-HWPE Protocols
-==============
-
 HWPE-Stream protocol
---------------------
+====================
 
 The HWPE-Stream protocol is a simple protocol designed to move data
 between the various sub-components of an HWPE. As HWPEs are memory-based
@@ -207,10 +204,10 @@ are assumed to have only valid bytes in their *data* payload. We refer
 HWPE-Stream streams with *strb* as *strobed streams*.
 
 HWPE-Mem protocols
-------------------
+==================
 
 HWPE-Mem
-********
+--------
 
 HWPEs are connected to external L1/L2 shared-memory by means of a simple
 memory protocol, using a request/grant handshake. The protocol used is
@@ -285,7 +282,7 @@ protocol and the IPs in this repository should not make assumptions
 on the *r_valid* in write transactions.
 
 HWPE-MemDecoupled
-******************
+-----------------
 
 The HWPE-Mem protocol can be used to directly connect an accelerator to the
 shared memory of a PULP-based system. However, transactions using this protocol
@@ -319,7 +316,7 @@ interface has to be treated as a HWPE-Mem protocol (i.e. it is sensitive
 to latency).
 
 Exchanging data between HWPE-Mem and HWPE-Stream
-************************************************
+------------------------------------------------
 
 As HWPEs ultimately consume and produce data to the external shared
 memory using one or more ports exposing TCDM interfaces, converting data
@@ -381,7 +378,7 @@ HWPE-Stream to a series of stores on HWPE-Mem. The example focuses on
 the realignment behavior.
 
 HWPE-Periph protocol
---------------------
+====================
 
 To enable control, HWPEs typically expose a slave port to the
 peripheral system interconnect. The slave port follows an extension of
@@ -459,74 +456,139 @@ in the same way.
 ..    strobe to indicate what data is meaningful.
 
 **********************
-HWPE interface modules
+HWPE Interface Modules
 **********************
 
-HWPE-Stream management modules
-==============================
+HWPE-Stream basic modules
+=========================
 
-HWPE-Stream IPs management modules, found within the *hwpe-stream* Git
-repository, are used to connect multiple streams, delay them, merge /
-split them, or otherwise morph them.
+Basic HWPE-Stream management modules are used to select multiple streams,
+merge multiple streams into one, split a stream in multiple ones, synchronize
+their handshakes and similar basic ``morphing'' functionality; or to delay
+and enqueue streams.
+Modules performing these functions can be found within the `rtl/basic` and
+`rtl/fifo` subfolders of the `hwpe-stream` repository.
 
-Stream merger
--------------
+.. raw:: latex
+
+    \clearpage
+
+hwpe_stream_merge
+-----------------
 
 .. _hwpe_stream_merge:
 .. svprettyplot:: ../rtl/basic/hwpe_stream_merge.sv
 
-Stream splitter
----------------
+.. raw:: latex
+
+    \clearpage
+
+hwpe_stream_split
+-----------------
 
 .. _hwpe_stream_split:
 .. svprettyplot:: ../rtl/basic/hwpe_stream_split.sv
 
-Stream fence
-------------
+.. raw:: latex
+
+    \clearpage
+
+hwpe_stream_fence
+-----------------
 
 .. _hwpe_stream_fence:
 .. svprettyplot:: ../rtl/basic/hwpe_stream_fence.sv
 
-Static stream multiplexer
--------------------------
+.. raw:: latex
+
+    \clearpage
+
+hwpe_stream_mux_static
+----------------------
 
 .. _hwpe_stream_mux_static:
 .. svprettyplot:: ../rtl/basic/hwpe_stream_mux_static.sv
 
-Static stream demultiplexer
----------------------------
+.. raw:: latex
+
+    \clearpage
+
+hwpe_stream_demux_static
+------------------------
 
 .. _hwpe_stream_demux_static:
 .. svprettyplot:: ../rtl/basic/hwpe_stream_demux_static.sv
 
+.. raw:: latex
 
-.. Stream FIFO
-.. -----------
+    \clearpage
 
-.. .. _hwpe_stream_fifo:
-.. .. svprettyplot:: ../rtl/fifo/hwpe_stream_fifo.sv
+.. hwpe_stream_buffer
+.. ------------------
+..
+.. .. _hwpe_stream_buffer:
+.. .. svprettyplot:: ../rtl/fifo/hwpe_stream_buffer.sv
+..
+.. .. raw:: latex
+..
+..     \clearpage
 
-..   **hwpe_stream_fifo** module.
+hwpe_stream_fifo
+----------------
 
-.. The **hwpe_stream_fifo** module implements a FIFO for HWPE-Stream
-.. streams of size DATA_WIDTH and depth FIFO_DEPTH. It is optionally
-.. implemented with latches if LATCH_FIFO=1. The
-.. **hwpe_stream_fifo_earlystall** variant lowers the ready signal one
-.. cycle before the FIFO is actually full.
+.. _hwpe_stream_fifo:
+.. svprettyplot:: ../rtl/fifo/hwpe_stream_fifo.sv
 
+.. raw:: latex
 
-.. .. Stream Buffer
-.. .. -------------
+    \clearpage
 
-.. .. .. _hwpe_stream_buffer:
-.. .. .. svprettyplot:: ../rtl/basic/hwpe_stream_buffer.sv
+hwpe_stream_fifo_earlystall
+---------------------------
 
-.. ..   **hwpe_stream_buffer** module.
+.. _hwpe_stream_fifo_earlystall:
+.. svprettyplot:: ../rtl/fifo/hwpe_stream_fifo_earlystall.sv
 
-.. .. The **hwpe_stream_buffer** implements a shallow pipeline stage of size
-.. .. DATA_WIDTH for cases where a full stream FIFO is not required, i.e. when
-.. .. the only important feature required is to cut forward propagation
-.. .. combinational paths.
+.. raw:: latex
+
+    \clearpage
+
+hwpe_stream_fifo_ctrl
+---------------------
+
+.. _hwpe_stream_fifo_ctrl:
+.. svprettyplot:: ../rtl/fifo/hwpe_stream_fifo_ctrl.sv
+
+.. raw:: latex
+
+    \clearpage
+
+Streamer modules
+================
+
+Streamer modules constitute the heart of the IPs use to interface HWPEs
+with a PULP system. They include all the modules that are used to
+generate HWPE-Streams from address patterns on the TCDM, including the
+address generation itself, data realignment to enable access to data located
+at non-byte-aligned addresses, strobe generation to selectively disable parts
+of a stream, and the main streamer source and sink modules used to put
+these functions together.
+Modules performing these functions can be found within the `rtl/streamer`
+subfolder of the `hwpe-stream` repository.
+
+.. raw:: latex
+
+    \clearpage
+
+hwpe_stream_addressgen
+----------------------
+
+.. _hwpe_stream_addressgen:
+.. svprettyplot:: ../rtl/streamer/hwpe_stream_addressgen.sv
+
+.. raw:: latex
+
+    \clearpage
 
 .. Source realigner
 .. ----------------

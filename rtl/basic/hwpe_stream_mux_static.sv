@@ -24,7 +24,7 @@
  *
  * .. _wavedrom_hwpe_stream_mux_static:
  * .. wavedrom:: wavedrom/hwpe_stream_mux_static.json
- *   :width: 70 %
+ *   :width: 85 %
  *   :caption: Example of **hwpe_stream_mux_static** operation.
  */
 

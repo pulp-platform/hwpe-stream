@@ -14,6 +14,26 @@
  * specific language governing permissions and limitations under the License.
  */
 
+/**
+ * The **hwpe_stream_fifo_ctrl** module implements a hardware FIFO queue
+ * similar to that implemented by **hwpe_stream_fifo**, but without any actual
+ * interface handshake forced on HWPE-Streams. Instead, it will push
+ * its "virtual" handshake on the `push_valid_i`/`push_ready_o` and
+ * `pop_valid_o`/`pop_ready_i` signals.
+ * It can be used to operate multiple big FIFO queues (e.g. with latches)
+ * in a synchronized fashion without breaking the HWPE-Stream protocol.
+ *
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_fifo_ctrl_params:
+ * .. table:: **hwpe_stream_fifo_ctrl** design-time parameters.
+ *
+ *   +--------------+--------------+------------------------------------------+
+ *   | **Name**     | **Default**  | **Description**                          |
+ *   +--------------+--------------+------------------------------------------+
+ *   | *FIFO_DEPTH* | 8            | Depth of the FIFO queue (multiple of 2). |
+ *   +--------------+--------------+------------------------------------------+
+ */
+
 import hwpe_stream_package::*;
 
 module hwpe_stream_fifo_ctrl #(

@@ -13,6 +13,126 @@
  * specific language governing permissions and limitations under the License.
  */
 
+ /**
+  * The **hwpe_stream_addressgen** module is used to generate addresses to
+  * load or store HWPE-Stream streams, as well as the related byte enable
+  * strobes (`gen_addr_o` and `gen_strb_o` respectively).
+  * The address generator can be used to generate address from a
+  * three-dimensional space of “words”, “lines” and “features”. Lines and
+  * features can be separated by a certain stride, and a roll parameter can
+  * be used to reuse the same offsets multiple times.
+  *
+  * The multiple loop functionality is partially overlapped by the functionality
+  * provided by the microcode processor `hwce_ctrl_ucode` that can be embedded
+  * in HWPEs. The latter is much more flexible and smaller, but less fast.
+  * When using a single loop in the address generator, the HWPE designer should
+  * statically set `line_stride` =0, `feat_length` =1, `feat_stride` =0.
+  *
+  * The address generation loop considers three-dimensional vectors, where
+  * the three dimensions are called *packet*, *line* and *features* from the
+  * innermost to the outermost.
+  * One iteration is performed per each cycle when `enable_i` is 1.
+  * Feature loops can behave in two different fashions, modeled after the
+  * behavior of input/output features in CNNs.
+  * The following piece of code resumes the basic functionality provided by
+  * the address generator, discarding more complex situations where the
+  * address is misaligned (resulting in one more transaction, introduced
+  * automatically).
+  *
+  * .. code-block:: C
+  *
+  *   int word_addr=0, line_addr=0, feat_addr=0;
+  *   int trans_idx=0;
+  *   while(trans_idx < trans_size) {
+  *     if(!enable)
+  *       continue;
+  *     for(int feat_idx=0; feat_idx<feat_roll; feat_idx++) { // feature loop
+  *       for(int line_idx=0; line_idx<feat_length; line_idx++) { // line loop
+  *         for(int word_idx=0; word_idx<line_length; word_idx++) { // word loop
+  *           gen_addr = base_addr + feat_addr + line_addr + word_idx * STEP;
+  *         }
+  *         line_addr += line_stride;
+  *       }
+  *       if((loop_outer) && (feat_idx == feat_roll-1)) {
+  *         feat_addr += feat_stride;
+  *         feat_idx  = 0;
+  *       }
+  *       else if ((!loop_outer) && (feat_idx < feat_roll-1)){
+  *         feat_addr += feat_stride;
+  *       }
+  *       else if ((!loop_outer) && (feat_idx == feat_roll-1)){
+  *         feat_addr = 0;
+  *         feat_idx  = 0;
+  *       }
+  *     }
+  *   }
+  *
+  * .. tabularcolumns:: |l|l|J|
+  * .. _hwpe_stream_addressgen_params:
+  * .. table:: **hwpe_stream_addressgen** design-time parameters.
+  *
+  *   +-------------------------+------------------------------------+---------------------------------------------------------------------------------------------+
+  *   | **Name**                | **Default**                        | **Description**                                                                             |
+  *   +-------------------------+------------------------------------+---------------------------------------------------------------------------------------------+
+  *   | *REALIGN_TYPE*          | HWPE_STREAM_REALIGN_SOURCE         | Type of realignment, can be set to HWPE_STREAM_REALIGN{SOURCE,SINK}.                        |
+  *   +-------------------------+------------------------------------+---------------------------------------------------------------------------------------------+
+  *   | *STEP*                  | 4                                  | Step of address generation (untested with != 4).                                            |
+  *   +-------------------------+------------------------------------+---------------------------------------------------------------------------------------------+
+  *   | *TRANS_CNT*             | 16                                 | Number of bits supported in the transaction counter, which will overflow at 2^ `TRANS_CNT`. |
+  *   +-------------------------+------------------------------------+---------------------------------------------------------------------------------------------+
+  *   | *CNT*                   | 10                                 | Number of bits supported in non-transaction counters, which will overflow at 2^ `CNT`.      |
+  *   +-------------------------+------------------------------------+---------------------------------------------------------------------------------------------+
+  *   | *DELAY_FLAGS*           | 0                                  | If 1, delay the production of flags by one cycle.                                           |
+  *   +-------------------------+------------------------------------+---------------------------------------------------------------------------------------------+
+  *
+  * .. tabularcolumns:: |l|l|J|
+  * .. _hwpe_stream_addressgen_ctrl:
+  * .. table:: **hwpe_stream_addressgen** input control signals.
+  *
+  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+  *   | **Name**                         | **Type**             | **Description**                                                                                             |
+  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+  *   | *base_addr*                      | `logic[31:0]`        | Byte-aligned base address of the stream in the HWPE-accessible memory.                                      |
+  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+  *   | *trans_size*                     | `logic[31:0]`        | Total size of transaction; only the `TRANS_CNT` LSB are actually used.                                      |
+  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+  *   | *line_stride*                    | `logic[15:0]`        | Distance between two adjacent lines in bytes.                                                               |
+  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+  *   | *line_length*                    | `logic[15:0]`        | Length of a line in words, rounded by including also incomplete final words.                                |
+  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+  *   | *feat_stride*                    | `logic[15:0]`        | Distance between two adjacent features in bytes.                                                            |
+  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+  *   | *feat_length*                    | `logic[15:0]`        | Length of a feature in number of lines.                                                                     |
+  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+  *   | *loop_outer*                     | `logic`              | Whether this corresponds to an outer or inner feature loop.                                                 |
+  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+  *   | *feat_roll*                      | `logic[15:0]`        | After this number of features, depending on *loop_outer*, feature index will be rolled back or incremented. |
+  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+  *   | *realign_type*                   | `logic`              | Unused.                                                                                                     |
+  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+  *   | *line_length_remainder*          | `logic[7:0]`         | Unused.                                                                                                     |
+  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+  *
+  * .. tabularcolumns:: |l|l|J|
+  * .. _hwpe_stream_addressgen_flags:
+  * .. table:: **hwpe_stream_addressgen** output flags.
+  *
+  *   +-----------------+------------------+----------------------------------------------------------------------------------------------+
+  *   | **Name**        | **Type**         | **Description**                                                                              |
+  *   +-----------------+------------------+----------------------------------------------------------------------------------------------+
+  *   | *realign_flags* | `ctrl_realign_t` | Control signals to be used for realignment by **hwpe_stream_{source,sink}_realign** modules. |
+  *   +-----------------+------------------+----------------------------------------------------------------------------------------------+
+  *   | *word_update*   | `logic`          | 1 when the word loop has been updated.                                                       |
+  *   +-----------------+------------------+----------------------------------------------------------------------------------------------+
+  *   | *line_update*   | `logic`          | 1 when the line loop has been updated.                                                       |
+  *   +-----------------+------------------+----------------------------------------------------------------------------------------------+
+  *   | *feat_update*   | `logic`          | 1 when the feature loop has been updated.                                                    |
+  *   +-----------------+------------------+----------------------------------------------------------------------------------------------+
+  *   | *in_progress*   | `logic`          | 1 when the address generation has progressed.                                                |
+  *   +-----------------+------------------+----------------------------------------------------------------------------------------------+
+  *
+  */
+
 import hwpe_stream_package::*;
 
 module hwpe_stream_addressgen
@@ -266,7 +386,7 @@ module hwpe_stream_addressgen
   end
 
   assign gen_addr_o = { gen_addr_int[31:2] , 2'b0 };
-  
+
   always_comb
   begin
     gen_strb_int = '1;

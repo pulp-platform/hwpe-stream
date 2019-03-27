@@ -14,6 +14,51 @@
  * specific language governing permissions and limitations under the License.
  */
 
+/**
+ * The **hwpe_stream_fifo** module implements a hardware FIFO queue for
+ * HWPE-Stream streams, used to withstand data scarcity (`valid` =1) or
+ * backpressure (`ready` =1), decoupling two architectural domains.
+ * This FIFO is single-clock and therefore cannot be used to cross two
+ * distinct clock domains.
+ * The FIFO will lower its `ready` signal on the input stream `push_i`
+ * interface when it is completely full, and will lower its `valid`
+ * signal on the output stream `pop_o` interface when it is completely
+ * empty.
+ *
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_fifo_params:
+ * .. table:: **hwpe_stream_fifo** design-time parameters.
+ *
+ *   +------------------------+--------------+--------------------------------------------------------------------------------------+
+ *   | **Name**               | **Default**  | **Description**                                                                      |
+ *   +------------------------+--------------+--------------------------------------------------------------------------------------+
+ *   | *DATA_WIDTH*           | 32           | Width of the HWPE-Streams (multiple of 32).                                          |
+ *   +------------------------+--------------+--------------------------------------------------------------------------------------+
+ *   | *FIFO_DEPTH*           | 8            | Depth of the FIFO queue (multiple of 2).                                             |
+ *   +------------------------+--------------+--------------------------------------------------------------------------------------+
+ *   | *LATCH_FIFO*           | 0            | If 1, use latches instead of flip-flops (requires special constraints in synthesis). |
+ *   +------------------------+--------------+--------------------------------------------------------------------------------------+
+ *   | *LATCH_FIFO_TEST_WRAP* | 0            | If 1 and *LATCH_FIFO* is 1, wrap latches with BIST wrappers.                         |
+ *   +------------------------+--------------+--------------------------------------------------------------------------------------+
+ *
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_fifo_flags:
+ * .. table:: **hwpe_stream_fifo** output flags.
+ *
+ *   +----------------+--------------+-----------------------------------+
+ *   | **Name**       | **Type**     | **Description**                   |
+ *   +----------------+--------------+-----------------------------------+
+ *   | *empty*        | `logic`      | 1 if the FIFO is currently empty. |
+ *   +----------------+--------------+-----------------------------------+
+ *   | *full*         | `logic`      | 1 if the FIFO is currently full.  |
+ *   +----------------+--------------+-----------------------------------+
+ *   | *push_pointer* | `logic[7:0]` | Unused.                           |
+ *   +----------------+--------------+-----------------------------------+
+ *   | *pop_pointer*  | `logic[7:0]` | Unused.                           |
+ *   +----------------+--------------+-----------------------------------+
+ *
+ */
+
 import hwpe_stream_package::*;
 
 module hwpe_stream_fifo #(
@@ -26,9 +71,9 @@ module hwpe_stream_fifo #(
   input  logic                   clk_i,
   input  logic                   rst_ni,
   input  logic                   clear_i,
-  
+
   output flags_fifo_t            flags_o,
-  
+
   hwpe_stream_intf_stream.sink   push_i,
   hwpe_stream_intf_stream.source pop_o
 );

@@ -15,7 +15,7 @@
 
 /**
  * The **hwpe_stream_split** module is used to split a single stream into
- * NB_OUT_STREAMS, 32-bit output streams. The *data* and *strb* channel
+ * `NB_OUT_STREAMS`, 32-bit output streams. The *data* and *strb* channel
  * from the input stream is split in ordered output streams, and the
  * *valid* is broadcast to all outgoing streams. The *ready* is generated
  * as the AND of all *ready*\ ’s from output streams.
@@ -28,8 +28,20 @@
  *
  * .. _wavedrom_hwpe_stream_split:
  * .. wavedrom:: wavedrom/hwpe_stream_split.json
- *   :width: 70 %
+ *   :width: 85 %
  *   :caption: Example of **hwpe_stream_split** operation.
+ *
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_split_params:
+ * .. table:: **hwpe_stream_split** design-time parameters.
+ *
+ *   +------------------+-------------+---------------------------------------------+
+ *   | **Name**         | **Default** | **Description**                             |
+ *   +------------------+-------------+---------------------------------------------+
+ *   | *NB_OUT_STREAMS* | 2           | Number of output HWPE-Stream streams.       |
+ *   +------------------+-------------+---------------------------------------------+
+ *   | *DATA_WIDTH_IN*  | 128         | Width of the input HWPE-Stream stream.      |
+ *   +------------------+-------------+---------------------------------------------+
  */
 
 import hwpe_stream_package::*;
