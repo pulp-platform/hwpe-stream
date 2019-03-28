@@ -1,3 +1,6 @@
+[![Documentation Status](https://readthedocs.org/projects/hwpe-doc/badge/?version=latest)](https://hwpe-doc.readthedocs.io/en/latest/?badge=latest)
+See documentation on https://readthedocs.org/projects/hwpe-doc.
+
 The `hwpe-stream` repository contains the definition of the HWPE-Stream and TCDM interfaces used with HWPEs (HW Processing Engines), as well as the IPs necessary to manage the streams and construct streamers, e.g. for the XNE, HWCE, etc.
 This repository contains the following IPs:
 
