@@ -13,6 +13,13 @@
  * specific language governing permissions and limitations under the License.
  */
 
+/**
+ * .. The **hwpe_stream_buffer** implements a shallow pipeline stage of size
+ * .. DATA_WIDTH for cases where a full stream FIFO is not required, i.e. when
+ * .. the only important feature required is to cut forward propagation
+ * .. combinational paths.
+ */
+
 import hwpe_stream_package::*;
 
 module hwpe_stream_buffer #(
