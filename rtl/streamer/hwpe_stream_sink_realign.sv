@@ -13,6 +13,46 @@
  * specific language governing permissions and limitations under the License.
  */
 
+/**
+ * The **hwpe_stream_sink_realign** module realigns HWPE-Streams to prepare
+ * them for storage in memory. Specifically, it rotates `strb` signals
+ * according to its control interface, produced along with addresses in the
+ * address generator.
+ *
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_sink_realign_params:
+ * .. table:: **hwpe_stream_sink_realign** design-time parameters.
+ *
+ *   +-------------------+-------------+--------------------------------------------------------------------------------------------------------------------------+
+ *   | **Name**          | **Default** | **Description**                                                                                                          |
+ *   +-------------------+-------------+--------------------------------------------------------------------------------------------------------------------------+
+ *   | *DATA_WIDTH*      | 32          | Width of input/output streams.                                                                                           |
+ *   +-------------------+-------------+--------------------------------------------------------------------------------------------------------------------------+
+ *
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_sink_realign_ctrl:
+ * .. table:: **hwpe_stream_sink_realign** input control signals.
+ *
+ *   +---------------+---------------+----------------------------------------------------------------------------------------------------+
+ *   | **Name**      | **Type**      | **Description**                                                                                    |
+ *   +---------------+---------------+----------------------------------------------------------------------------------------------------+
+ *   | *enable*      | `logic`       | Unused.                                                                                            |
+ *   +---------------+---------------+----------------------------------------------------------------------------------------------------+
+ *   | *strb_valid*  | `logic`       | Unused.                                                                                            |
+ *   +---------------+---------------+----------------------------------------------------------------------------------------------------+
+ *   | *realign*     | `logic`       | If 1, the realigner is actively used to generate strobed HWPE-Streams. If 0, it is bypassed.       |
+ *   +---------------+---------------+----------------------------------------------------------------------------------------------------+
+ *   | *first*       | `logic`       | Strobe at 1 for the first packet in a line.                                                        |
+ *   +---------------+---------------+----------------------------------------------------------------------------------------------------+
+ *   | *last*        | `logic`       | Strobe at 1 for the last packet in a line.                                                         |
+ *   +---------------+---------------+----------------------------------------------------------------------------------------------------+
+ *   | *last_packet* | `logic`       | Strobe at 1 for the last packet of the transfer.                                                   |
+ *   +---------------+---------------+----------------------------------------------------------------------------------------------------+
+ *   | *line_length* | `logic[15:0]` | Unused.                                                                                            |
+ *   +---------------+---------------+----------------------------------------------------------------------------------------------------+
+ *
+ */
+
 import hwpe_stream_package::*;
 
 module hwpe_stream_sink_realign #(
@@ -25,8 +65,8 @@ module hwpe_stream_sink_realign #(
   input  logic                    test_mode_i,
 
   input  ctrl_realign_t           ctrl_i,
-  
-  input  logic [DATA_WIDTH/8-1:0] strb_i, 
+
+  input  logic [DATA_WIDTH/8-1:0] strb_i,
   hwpe_stream_intf_stream.sink    push_i,
   hwpe_stream_intf_stream.source  pop_o
 );
