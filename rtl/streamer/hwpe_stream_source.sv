@@ -62,6 +62,14 @@
  *   | *ready_fifo*       | `logic`              | Unused.                                                  |
  *   +--------------------+----------------------+----------------------------------------------------------+
  *
+ * .. _hwpe_stream_source_archi:
+ * .. figure:: img/hwpe_stream_source_archi.*
+ *   :figwidth: 100%
+ *   :width: 100%
+ *   :align: center
+ *
+ *   Architecture of the source streamer.
+ *
  */
 
 import hwpe_stream_package::*;

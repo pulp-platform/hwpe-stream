@@ -13,6 +13,57 @@
  * specific language governing permissions and limitations under the License.
  */
 
+/**
+ * The **hwpe_stream_sink** module is the high-level sink streamer
+ * performing a series of stores on a HWPE-Mem or HWPE-MemDecoupled interface
+ * from an incoming HWPE-Stream data stream from a HWPE engine/datapath.
+ *
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_sink_params:
+ * .. table:: **hwpe_stream_sink** design-time parameters.
+ *
+ *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | **Name**          | **Default** | **Description**                                                                                                        |
+ *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | *USE_TCDM_FIFOS*  | 0           | If 1, the module produces a HWPE-MemDecoupled interface and includes a TCDM FIFO directly inside.                      |
+ *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | *DATA_WIDTH*      | 32          | Width of input/output streams.                                                                                         |
+ *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | *LATCH_FIFO*      | 0           | If 1, use latches instead of flip-flops (requires special constraints in synthesis).                                   |
+ *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | *TRANS_CNT*       | 16          | Number of bits supported in the transaction counter of the address generator, which will overflow at 2^ `TRANS_CNT`.   |
+ *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
+ *
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_source_ctrl:
+ * .. table:: **hwpe_stream_source** input control signals.
+ *
+ *   +-------------------+---------------------+-------------------------------------------------------------------------+
+ *   | **Name**          | **Type**            | **Description**                                                         |
+ *   +-------------------+---------------------+-------------------------------------------------------------------------+
+ *   | *req_start*       | `logic`             | When 1, the source streamer operation is started if it is ready.        |
+ *   +-------------------+---------------------+-------------------------------------------------------------------------+
+ *   | *addressgen_ctrl* | `ctrl_addressgen_t` | Configuration of the address generator (see **hwpe_stream_addresgen**). |
+ *   +-------------------+---------------------+-------------------------------------------------------------------------+
+ *
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_source_flags:
+ * .. table:: **hwpe_stream_source** output flags.
+ *
+ *   +--------------------+----------------------+----------------------------------------------------------+
+ *   | **Name**           | **Type**             | **Description**                                          |
+ *   +--------------------+----------------------+----------------------------------------------------------+
+ *   | *ready_start*      | `logic`              | 1 when the source streamer is ready to start operation.  |
+ *   +--------------------+----------------------+----------------------------------------------------------+
+ *   | *done*             | `logic`              | 1 for one cycle when the streamer ends operation.        |
+ *   +--------------------+----------------------+----------------------------------------------------------+
+ *   | *addressgen_flags* | `flags_addressgen_t` | Address generator flags (see **hwpe_stream_addresgen**). |
+ *   +--------------------+----------------------+----------------------------------------------------------+
+ *   | *ready_fifo*       | `logic`              | Unused.                                                  |
+ *   +--------------------+----------------------+----------------------------------------------------------+
+ *
+ */
+
 import hwpe_stream_package::*;
 
 module hwpe_stream_sink
