@@ -23,6 +23,13 @@
  * to fill all out ports with requests from the in port, and not
  * to route in requests to a specific out port.
  *
+ * Notice that the multiplexer is not "optimal" in the sense
+ * that there is no reorder buffer, so transactions cannot be swapped
+ * in-flight to optimally fill the downstream available bandwidth.
+ * However, in real accelerators many systematic issues with bandwidth
+ * sharing can be solved by upstream TCDM FIFOs and by clever reordering
+ * of channels, since the dataflow schedule is known.
+ *
  * .. tabularcolumns:: |l|l|J|
  * .. _hwpe_stream_tcdm_mux_params:
  * .. table:: **hwpe_stream_tcdm_mux** design-time parameters.
