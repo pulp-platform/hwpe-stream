@@ -17,6 +17,26 @@
  * The **hwpe_stream_sink** module is the high-level sink streamer
  * performing a series of stores on a HWPE-Mem or HWPE-MemDecoupled interface
  * from an incoming HWPE-Stream data stream from a HWPE engine/datapath.
+ * The sink streamer is a composite module that makes use of many other
+ * fundamental IPs. Its architecture is shown in :numfig: `_hwpe_stream_sink_archi`.
+ *
+ * .. _hwpe_stream_sink_archi:
+ * .. figure:: img/hwpe_stream_sink_archi.*
+ *   :figwidth: 90%
+ *   :width: 90%
+ *   :align: center
+ *
+ *   Architecture of the source streamer.
+ *
+ * Fundamentally, a ink streamer acts as a specialized DMA engine acting
+ * out a predefined pattern from an **hwpe_stream_addressgen** to perform
+ * a burst of stores via a HWPE-Mem interface, consuming a HWPE-Stream data
+ * stream into the HWPE-Mem `data` field.
+ *
+ * The sink streamer indifferently supports standard HWPE-Mem or delayed
+ * HWPE-MemDecoupled accesses. This is due to the nature of store streams,
+ * that are unidirectional (i.e. `addr` and `data` move in the same direction)
+ * and hence insensitive to latency.
  *
  * .. tabularcolumns:: |l|l|J|
  * .. _hwpe_stream_sink_params:
@@ -35,25 +55,25 @@
  *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
  *
  * .. tabularcolumns:: |l|l|J|
- * .. _hwpe_stream_source_ctrl:
- * .. table:: **hwpe_stream_source** input control signals.
+ * .. _hwpe_stream_sink_ctrl:
+ * .. table:: **hwpe_stream_sink** input control signals.
  *
  *   +-------------------+---------------------+-------------------------------------------------------------------------+
  *   | **Name**          | **Type**            | **Description**                                                         |
  *   +-------------------+---------------------+-------------------------------------------------------------------------+
- *   | *req_start*       | `logic`             | When 1, the source streamer operation is started if it is ready.        |
+ *   | *req_start*       | `logic`             | When 1, the sink streamer operation is started if it is ready.          |
  *   +-------------------+---------------------+-------------------------------------------------------------------------+
  *   | *addressgen_ctrl* | `ctrl_addressgen_t` | Configuration of the address generator (see **hwpe_stream_addresgen**). |
  *   +-------------------+---------------------+-------------------------------------------------------------------------+
  *
  * .. tabularcolumns:: |l|l|J|
- * .. _hwpe_stream_source_flags:
- * .. table:: **hwpe_stream_source** output flags.
+ * .. _hwpe_stream_sink_flags:
+ * .. table:: **hwpe_stream_sink** output flags.
  *
  *   +--------------------+----------------------+----------------------------------------------------------+
  *   | **Name**           | **Type**             | **Description**                                          |
  *   +--------------------+----------------------+----------------------------------------------------------+
- *   | *ready_start*      | `logic`              | 1 when the source streamer is ready to start operation.  |
+ *   | *ready_start*      | `logic`              | 1 when the sink streamer is ready to start operation.    |
  *   +--------------------+----------------------+----------------------------------------------------------+
  *   | *done*             | `logic`              | 1 for one cycle when the streamer ends operation.        |
  *   +--------------------+----------------------+----------------------------------------------------------+

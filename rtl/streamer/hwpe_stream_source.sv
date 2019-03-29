@@ -17,6 +17,30 @@
  * The **hwpe_stream_source** module is the high-level source streamer
  * performing a series of loads on a HWPE-Mem or HWPE-MemDecoupled interface
  * and producing a HWPE-Stream data stream to feed a HWPE engine/datapath.
+ * The source streamer is a composite module that makes use of many other
+ * fundamental IPs. Its architecture is shown in :numfig: `_hwpe_stream_source_archi`.
+ *
+ * .. _hwpe_stream_source_archi:
+ * .. figure:: img/hwpe_stream_source_archi.*
+ *   :figwidth: 90%
+ *   :width: 90%
+ *   :align: center
+ *
+ *   Architecture of the source streamer.
+ *
+ * Fundamentally, a source streamer acts as a specialized DMA engine acting
+ * out a predefined pattern from an **hwpe_stream_addressgen** to perform
+ * a burst of loads via a HWPE-Mem interface, producing a HWPE-Stream
+ * data stream from the HWPE-Mem `r_data` field.
+ *
+ * Depending on the `DECOUPLED` parameter, the streamer supports delayed
+ * accesses using a HWPE-MemDecoupled interface.
+ * The source streamer does not include any TCDM FIFO inside on its own;
+ * rather, it provides a specific `tcdm_fifo_ready_o`
+ * output signal that can be hooked to an external **hwpe_stream_tcdm_fifo_load**.
+ * `tcdm_fifo_ready_o` provides a backpressure mechanism from the source
+ * streamer to the TCDM FIFO (this is unnecessary in the case of TCDM FIFOs for
+ * store).
  *
  * .. tabularcolumns:: |l|l|J|
  * .. _hwpe_stream_source_params:
@@ -27,7 +51,7 @@
  *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
  *   | *DECOUPLED*       | 0           | If 1, the module expects a HWPE-MemDecoupled interface instead of HWPE-Mem.                                            |
  *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
- *   | *DATA_WIDTH*      | 32          | Width of input/output streams.                                                                                         |
+ *   | *DATA_WIDTH*      | 32          | Width of input/output streams (multiple of 32).                                                                        |
  *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
  *   | *LATCH_FIFO*      | 0           | If 1, use latches instead of flip-flops (requires special constraints in synthesis).                                   |
  *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
@@ -61,14 +85,6 @@
  *   +--------------------+----------------------+----------------------------------------------------------+
  *   | *ready_fifo*       | `logic`              | Unused.                                                  |
  *   +--------------------+----------------------+----------------------------------------------------------+
- *
- * .. _hwpe_stream_source_archi:
- * .. figure:: img/hwpe_stream_source_archi.*
- *   :figwidth: 100%
- *   :width: 100%
- *   :align: center
- *
- *   Architecture of the source streamer.
  *
  */
 

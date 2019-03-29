@@ -16,8 +16,8 @@
 
 /**
  * The **hwpe_stream_fifo** module implements a hardware FIFO queue for
- * HWPE-Stream streams, used to withstand data scarcity (`valid` =1) or
- * backpressure (`ready` =1), decoupling two architectural domains.
+ * HWPE-Stream streams, used to withstand data scarcity (`valid`=0) or
+ * backpressure (`ready`=0), decoupling two architectural domains.
  * This FIFO is single-clock and therefore cannot be used to cross two
  * distinct clock domains.
  * The FIFO will lower its `ready` signal on the input stream `push_i`
@@ -32,7 +32,7 @@
  *   +------------------------+--------------+--------------------------------------------------------------------------------------+
  *   | **Name**               | **Default**  | **Description**                                                                      |
  *   +------------------------+--------------+--------------------------------------------------------------------------------------+
- *   | *DATA_WIDTH*           | 32           | Width of the HWPE-Streams (multiple of 32).                                          |
+ *   | *DATA_WIDTH*           | 32           | Width of the HWPE-Streams (typically multiple of 32, but this module does not care). |
  *   +------------------------+--------------+--------------------------------------------------------------------------------------+
  *   | *FIFO_DEPTH*           | 8            | Depth of the FIFO queue (multiple of 2).                                             |
  *   +------------------------+--------------+--------------------------------------------------------------------------------------+
