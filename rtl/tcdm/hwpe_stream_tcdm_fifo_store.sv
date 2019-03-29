@@ -26,7 +26,7 @@
  * The FIFO will lower its `gnt` signal on the slave interface `tcdm_slave`
  * when it is completely full, and will lower its `req`
  * signal on the master interface `tcdm_master` when it is completely
- * empty. :numfig:`_hwpe_stream_tcdm_fifo_store_mapping` shows this mapping.
+ * empty. :numref:`_hwpe_stream_tcdm_fifo_store_mapping` shows this mapping.
  *
  * .. _hwpe_stream_tcdm_fifo_store_mapping:
  * .. figure:: img/hwpe_stream_tcdm_fifo_store.*

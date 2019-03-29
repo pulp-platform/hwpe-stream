@@ -34,7 +34,7 @@
  * signal and the outgoing stream `valid` signal. `gnt` is hooked to the
  * outgoing stream `ready` signal.
  * The `r_valid` is mapped on `valid` in the incoming stream.
- * :numfig:`_hwpe_stream_tcdm_fifo_load_mapping` shows this mapping.
+ * :numref:`_hwpe_stream_tcdm_fifo_load_mapping` shows this mapping.
  *
  * .. _hwpe_stream_tcdm_fifo_load_mapping:
  * .. figure:: img/hwpe_stream_tcdm_fifo_load.*
