@@ -1,4 +1,4 @@
-/* 
+/*
  * hwpe_stream_tcdm_mux_static.sv
  * Francesco Conti <f.conti@unibo.it>
  *
@@ -15,6 +15,23 @@
  * The TCDM static multiplexer is used in place of the dynamic one
  * when two sets of ports are guaranteed to be used in a strictly
  * alternative fashion.
+ */
+
+/**
+ * The **hwpe_stream_tcdm_mux_static** module is used to statically share
+ * a set of `out` master ports using the HWPE-Mem protocol between two sets
+ * of slave ports `in0` and `in1`. It works similarly to the **hwpe_stream_mux_static** and
+ * similarly requires a strictly static selector `sel_i`.
+ *
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_tcdm_mux_static_params:
+ * .. table:: **hwpe_stream_tcdm_mux_static** design-time parameters.
+ *
+ *   +------------+-------------+-------------------------------------+
+ *   | **Name**   | **Default** | **Description**                     |
+ *   +------------+-------------+-------------------------------------+
+ *   | *NB_CHAN*  | 2           | Number of output HWPE-Mem channels. |
+ *   +------------+-------------+-------------------------------------+
  */
 
 import hwpe_stream_package::*;

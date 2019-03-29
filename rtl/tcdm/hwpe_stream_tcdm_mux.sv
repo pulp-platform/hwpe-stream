@@ -15,7 +15,7 @@
 
 /**
  * The **TCDM multiplexer** can be used to funnel more input "virtual"
- * TCDM channels into a smaller set of master ports.
+ * TCDM channels `in` into a smaller set of master ports `out`.
  * It uses a round robin counter to avoid starvation, and differs
  * from the modules used within the logarithmic interconnect in
  * that arbitration is performed depending on the round robin
@@ -23,7 +23,18 @@
  * to fill all out ports with requests from the in port, and not
  * to route in requests to a specific out port.
  *
- * That is its purpose.
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_tcdm_mux_params:
+ * .. table:: **hwpe_stream_tcdm_mux** design-time parameters.
+ *
+ *   +---------------+-------------+-------------------------------------+
+ *   | **Name**      | **Default** | **Description**                     |
+ *   +---------------+-------------+-------------------------------------+
+ *   | *NB_IN_CHAN*  | 2           | Number of input HWPE-Mem channels.  |
+ *   +---------------+-------------+-------------------------------------+
+ *   | *NB_OUT_CHAN* | 1           | Number of output HWPE-Mem channels. |
+ *   +---------------+-------------+-------------------------------------+
+ *
  */
 
 import hwpe_stream_package::*;
