@@ -13,6 +13,81 @@
  * specific language governing permissions and limitations under the License.
  */
 
+/**
+ * The **hwpe_stream_source** module is the high-level source streamer
+ * performing a series of loads on a HWPE-Mem or HWPE-MemDecoupled interface
+ * and producing a HWPE-Stream data stream to feed a HWPE engine/datapath.
+ * The source streamer is a composite module that makes use of many other
+ * fundamental IPs. Its architecture is shown in :numfig: `_hwpe_stream_source_archi`.
+ *
+ * .. _hwpe_stream_source_archi:
+ * .. figure:: img/hwpe_stream_source_archi.*
+ *   :figwidth: 90%
+ *   :width: 90%
+ *   :align: center
+ *
+ *   Architecture of the source streamer.
+ *
+ * Fundamentally, a source streamer acts as a specialized DMA engine acting
+ * out a predefined pattern from an **hwpe_stream_addressgen** to perform
+ * a burst of loads via a HWPE-Mem interface, producing a HWPE-Stream
+ * data stream from the HWPE-Mem `r_data` field.
+ *
+ * Depending on the `DECOUPLED` parameter, the streamer supports delayed
+ * accesses using a HWPE-MemDecoupled interface.
+ * The source streamer does not include any TCDM FIFO inside on its own;
+ * rather, it provides a specific `tcdm_fifo_ready_o`
+ * output signal that can be hooked to an external **hwpe_stream_tcdm_fifo_load**.
+ * `tcdm_fifo_ready_o` provides a backpressure mechanism from the source
+ * streamer to the TCDM FIFO (this is unnecessary in the case of TCDM FIFOs for
+ * store).
+ *
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_source_params:
+ * .. table:: **hwpe_stream_source** design-time parameters.
+ *
+ *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | **Name**          | **Default** | **Description**                                                                                                        |
+ *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | *DECOUPLED*       | 0           | If 1, the module expects a HWPE-MemDecoupled interface instead of HWPE-Mem.                                            |
+ *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | *DATA_WIDTH*      | 32          | Width of input/output streams (multiple of 32).                                                                        |
+ *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | *LATCH_FIFO*      | 0           | If 1, use latches instead of flip-flops (requires special constraints in synthesis).                                   |
+ *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | *TRANS_CNT*       | 16          | Number of bits supported in the transaction counter of the address generator, which will overflow at 2^ `TRANS_CNT`.   |
+ *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
+ *
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_source_ctrl:
+ * .. table:: **hwpe_stream_source** input control signals.
+ *
+ *   +-------------------+---------------------+-------------------------------------------------------------------------+
+ *   | **Name**          | **Type**            | **Description**                                                         |
+ *   +-------------------+---------------------+-------------------------------------------------------------------------+
+ *   | *req_start*       | `logic`             | When 1, the source streamer operation is started if it is ready.        |
+ *   +-------------------+---------------------+-------------------------------------------------------------------------+
+ *   | *addressgen_ctrl* | `ctrl_addressgen_t` | Configuration of the address generator (see **hwpe_stream_addresgen**). |
+ *   +-------------------+---------------------+-------------------------------------------------------------------------+
+ *
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_source_flags:
+ * .. table:: **hwpe_stream_source** output flags.
+ *
+ *   +--------------------+----------------------+----------------------------------------------------------+
+ *   | **Name**           | **Type**             | **Description**                                          |
+ *   +--------------------+----------------------+----------------------------------------------------------+
+ *   | *ready_start*      | `logic`              | 1 when the source streamer is ready to start operation.  |
+ *   +--------------------+----------------------+----------------------------------------------------------+
+ *   | *done*             | `logic`              | 1 for one cycle when the streamer ends operation.        |
+ *   +--------------------+----------------------+----------------------------------------------------------+
+ *   | *addressgen_flags* | `flags_addressgen_t` | Address generator flags (see **hwpe_stream_addresgen**). |
+ *   +--------------------+----------------------+----------------------------------------------------------+
+ *   | *ready_fifo*       | `logic`              | Unused.                                                  |
+ *   +--------------------+----------------------+----------------------------------------------------------+
+ *
+ */
+
 import hwpe_stream_package::*;
 
 module hwpe_stream_source
@@ -199,7 +274,7 @@ module hwpe_stream_source
       assign tcdm[ii].add  = gen_addr + ii*4;
       assign tcdm[ii].wen  = 1'b1;
       assign tcdm[ii].be   = 4'h0;
-      assign tcdm[ii].data = '0; 
+      assign tcdm[ii].data = '0;
       assign tcdm_split_gnt[ii] = tcdm[ii].gnt | fence_hs[ii];
       assign split_streams[ii].strb  = '1;
       assign split_streams[ii].data  = stream_valid_d ? stream_data_d : stream_data_q;

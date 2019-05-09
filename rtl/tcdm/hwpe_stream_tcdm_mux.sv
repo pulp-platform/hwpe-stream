@@ -11,15 +11,37 @@
  * this License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
- *
- * The TCDM multiplexer can be used to funnel more input "virtual"
- * TCDM channels into a smaller set of master ports.
+ */
+
+/**
+ * The **TCDM multiplexer** can be used to funnel more input "virtual"
+ * TCDM channels `in` into a smaller set of master ports `out`.
  * It uses a round robin counter to avoid starvation, and differs
  * from the modules used within the logarithmic interconnect in
  * that arbitration is performed depending on the round robin
  * counter and not on the slave port; in other words, its task is
  * to fill all out ports with requests from the in port, and not
  * to route in requests to a specific out port.
+ *
+ * Notice that the multiplexer is not "optimal" in the sense
+ * that there is no reorder buffer, so transactions cannot be swapped
+ * in-flight to optimally fill the downstream available bandwidth.
+ * However, in real accelerators many systematic issues with bandwidth
+ * sharing can be solved by upstream TCDM FIFOs and by clever reordering
+ * of channels, since the dataflow schedule is known.
+ *
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_tcdm_mux_params:
+ * .. table:: **hwpe_stream_tcdm_mux** design-time parameters.
+ *
+ *   +---------------+-------------+-------------------------------------+
+ *   | **Name**      | **Default** | **Description**                     |
+ *   +---------------+-------------+-------------------------------------+
+ *   | *NB_IN_CHAN*  | 2           | Number of input HWPE-Mem channels.  |
+ *   +---------------+-------------+-------------------------------------+
+ *   | *NB_OUT_CHAN* | 1           | Number of output HWPE-Mem channels. |
+ *   +---------------+-------------+-------------------------------------+
+ *
  */
 
 import hwpe_stream_package::*;

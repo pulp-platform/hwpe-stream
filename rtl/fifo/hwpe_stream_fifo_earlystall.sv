@@ -14,6 +14,50 @@
  * specific language governing permissions and limitations under the License.
  */
 
+/**
+ * The **hwpe_stream_fifo_earlystall** module implements a hardware FIFO queue for
+ * HWPE-Stream streams, used to withstand data scarcity (`valid` =1) or
+ * backpressure (`ready` =1), decoupling two architectural domains.
+ * This FIFO is single-clock and therefore cannot be used to cross two
+ * distinct clock domains.
+ * The only difference with respect to **hwpe_stream_fifo** is that this version
+ * of the FIFO lowers its `ready` signal one cycle earlier, i.e. when it is
+ * filled by `FIFO_DEPTH` -1 elements. It will lower its `valid`
+ * signal on the output stream `pop_o` interface when it is completely
+ * empty.
+ *
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_fifo_earlystall_params:
+ * .. table:: **hwpe_stream_fifo_earlystall** design-time parameters.
+ *
+ *   +------------------------+--------------+--------------------------------------------------------------------------------------+
+ *   | **Name**               | **Default**  | **Description**                                                                      |
+ *   +------------------------+--------------+--------------------------------------------------------------------------------------+
+ *   | *DATA_WIDTH*           | 32           | Width of the HWPE-Streams (multiple of 32).                                          |
+ *   +------------------------+--------------+--------------------------------------------------------------------------------------+
+ *   | *FIFO_DEPTH*           | 8            | Depth of the FIFO queue (multiple of 2).                                             |
+ *   +------------------------+--------------+--------------------------------------------------------------------------------------+
+ *   | *LATCH_FIFO*           | 0            | If 1, use latches instead of flip-flops (requires special constraints in synthesis). |
+ *   +------------------------+--------------+--------------------------------------------------------------------------------------+
+ *
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_fifo_earlystall_flags:
+ * .. table:: **hwpe_stream_fifo_earlystall** output flags.
+ *
+ *   +----------------+--------------+-----------------------------------+
+ *   | **Name**       | **Type**     | **Description**                   |
+ *   +----------------+--------------+-----------------------------------+
+ *   | *empty*        | `logic`      | 1 if the FIFO is currently empty. |
+ *   +----------------+--------------+-----------------------------------+
+ *   | *full*         | `logic`      | 1 if the FIFO is currently full.  |
+ *   +----------------+--------------+-----------------------------------+
+ *   | *push_pointer* | `logic[7:0]` | Unused.                           |
+ *   +----------------+--------------+-----------------------------------+
+ *   | *pop_pointer*  | `logic[7:0]` | Unused.                           |
+ *   +----------------+--------------+-----------------------------------+
+ *
+ */
+
 import hwpe_stream_package::*;
 
 module hwpe_stream_fifo_earlystall #(
@@ -25,7 +69,7 @@ module hwpe_stream_fifo_earlystall #(
   input  logic                   clk_i,
   input  logic                   rst_ni,
   input  logic                   clear_i,
-  
+
   output flags_fifo_t            flags_o,
 
   hwpe_stream_intf_stream.sink   push_i,

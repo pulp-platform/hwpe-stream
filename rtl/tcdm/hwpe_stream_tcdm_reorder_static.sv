@@ -1,4 +1,4 @@
-/* 
+/*
  * hwpe_stream_tcdm_reorder_static.sv
  * Francesco Conti <f.conti@unibo.it>
  *
@@ -11,14 +11,23 @@
  * this License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
+ */
+
+/**
+ * The **hwpe_stream_tcdm_reorder_static** block can be used to rotate the order of a
+ * set of HWPE-Mem channels depending on an `order_i` input, which
+ * is considered static. This is used to statically change the order of a
+ * set of channels.
  *
- * This TCDM reorder block can be used to rotate the order of a
- * set of TCDM channels depending on an order_i input, which
- * can be changed dynamically (e.g. a counter). This is used
- * to "equalize" channels with different probabilities of issuing
- * a request so that the downstream TCDM channels are used with
- * the same average probability, minimizing the chances for
- * memory starvation.
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_tcdm_reorder_static_params:
+ * .. table:: **hwpe_stream_tcdm_reorder_static** design-time parameters.
+ *
+ *   +------------+-------------+------------------------------+
+ *   | **Name**   | **Default** | **Description**              |
+ *   +------------+-------------+------------------------------+
+ *   | *NB_CHAN*  | 2           | Number of HWPE-Mem channels. |
+ *   +------------+-------------+------------------------------+
  */
 
 import hwpe_stream_package::*;
@@ -35,8 +44,8 @@ module hwpe_stream_tcdm_reorder_static
   input  logic [NB_CHAN-1:0][$clog2(NB_CHAN)-1:0] order_i,
 
   hwpe_stream_intf_tcdm.slave        in  [NB_CHAN-1:0],
-  hwpe_stream_intf_tcdm.slave        out [NB_CHAN-1:0]
-  
+  hwpe_stream_intf_tcdm.master       out [NB_CHAN-1:0]
+
 );
 
   localparam NB_IN_CHAN  = NB_CHAN;

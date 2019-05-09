@@ -102,7 +102,7 @@ interface hwpe_stream_intf_stream (
     ($past(valid) & ~($past(valid) & $past(ready))) |-> ((data == $past(data)) && (strb == $past(strb))) | BYPASS_VCR_ASSERT;
   endproperty;
 
-  // The deassertion of valid (transition 1í0) can happen only in the cycle
+  // The deassertion of valid (transition 1->0) can happen only in the cycle
   // after a valid handshake. In other words, valid data produced by a source
   // must be consumed on the sink side before valid is deasserted.
   property hwpe_stream_valid_deassert_rule;

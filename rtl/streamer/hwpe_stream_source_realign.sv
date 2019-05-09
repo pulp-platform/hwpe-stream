@@ -13,6 +13,60 @@
  * specific language governing permissions and limitations under the License.
  */
 
+/**
+ * The **hwpe_stream_source_realign** module realigns HWPE-Streams loaded
+ * in a misaligned fashion from memory. Specifically, it rotates `strb` signals
+ * according to its control interface, produced along with addresses in the
+ * address generator.
+ *
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_source_realign_params:
+ * .. table:: **hwpe_stream_source_realign** design-time parameters.
+ *
+ *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | **Name**          | **Default** | **Description**                                                                                                        |
+ *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | *DECOUPLED*       | 0           | If 1, the module expects a HWPE-MemDecoupled interface instead of HWPE-Mem.                                            |
+ *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | *DATA_WIDTH*      | 32          | Width of input/output streams.                                                                                         |
+ *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | *STRB_FIFO_DEPTH* | 4           | Depth of the FIFO queue used for strobes; when full, the realigner will lower its ready signal at the input interface. |
+ *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
+ *
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_source_realign_ctrl:
+ * .. table:: **hwpe_stream_source_realign** input control signals.
+ *
+ *   +---------------+---------------+----------------------------------------------------------------------------------------------------+
+ *   | **Name**      | **Type**      | **Description**                                                                                    |
+ *   +---------------+---------------+----------------------------------------------------------------------------------------------------+
+ *   | *enable*      | `logic`       | If 0, the realigner is fully clock-gated.                                                          |
+ *   +---------------+---------------+----------------------------------------------------------------------------------------------------+
+ *   | *strb_valid*  | `logic`       | If 1, the strobe at the `strb_i` interface is considered valid.                                    |
+ *   +---------------+---------------+----------------------------------------------------------------------------------------------------+
+ *   | *realign*     | `logic`       | If 1, the realigner is actively used to generate strobed HWPE-Streams. If 0, it is bypassed.       |
+ *   +---------------+---------------+----------------------------------------------------------------------------------------------------+
+ *   | *first*       | `logic`       | Strobe at 1 for the first packet in a line.                                                        |
+ *   +---------------+---------------+----------------------------------------------------------------------------------------------------+
+ *   | *last*        | `logic`       | Strobe at 1 for the last packet in a line.                                                         |
+ *   +---------------+---------------+----------------------------------------------------------------------------------------------------+
+ *   | *last_packet* | `logic`       | Strobe at 1 for the last packet of the transfer.                                                   |
+ *   +---------------+---------------+----------------------------------------------------------------------------------------------------+
+ *   | *line_length* | `logic[15:0]` | Length of a line in words, rounded by including also incomplete final words.                       |
+ *   +---------------+---------------+----------------------------------------------------------------------------------------------------+
+ *
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_source_realign_flags:
+ * .. table:: **hwpe_stream_source_realign** output flags.
+ *
+ *   +-------------------+---------------+-----------------+
+ *   | **Name**          | **Type**      | **Description** |
+ *   +-------------------+---------------+-----------------+
+ *   | *decoupled_stall* | `logic`       | Do not use.     |
+ *   +-------------------+---------------+-----------------+
+ *
+ */
+
 import hwpe_stream_package::*;
 
 module hwpe_stream_source_realign #(
@@ -29,8 +83,8 @@ module hwpe_stream_source_realign #(
 
   input  ctrl_realign_t           ctrl_i,
   output flags_realign_t          flags_o,
-  
-  input  logic [DATA_WIDTH/8-1:0] strb_i, 
+
+  input  logic [DATA_WIDTH/8-1:0] strb_i,
   hwpe_stream_intf_stream.sink    push_i,
   hwpe_stream_intf_stream.source  pop_o
 );
@@ -77,7 +131,7 @@ module hwpe_stream_source_realign #(
       logic last_packet_q;
 
       assign line_length_m1 = (ctrl_i.realign == 1'b0) ? ctrl_i.line_length - 1 :
-                                                         ctrl_i.line_length;                                        
+                                                         ctrl_i.line_length;
 
       always_comb
       begin
@@ -219,7 +273,7 @@ module hwpe_stream_source_realign #(
       assign int_last  = ctrl_i.last;
       assign int_last_packet = ctrl_i.last_packet;
       assign int_strb = strb_i;
-      
+
     end
   endgenerate
 
