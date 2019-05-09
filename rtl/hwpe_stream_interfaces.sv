@@ -48,6 +48,7 @@ interface hwpe_stream_intf_tcdm (
   );
 
 `ifndef SYNTHESIS
+`ifndef VERILATOR
   // The r_valid signal must be asserted the cycle after a valid read handshake;
   // r_data must be valid on this cycle. This is due to the tightly-coupled
   // memories; if the memory cannot respond in one cycle, it must delay
@@ -59,6 +60,7 @@ interface hwpe_stream_intf_tcdm (
 
   HWPE_TCDM_R_VALID: assert property(hwpe_tcdm_r_valid_rule)
     else `HWPE_ASSERT_SEVERITY("ASSERTION FAILURE HWPE_TCDM_R_VALID", 1);
+`endif
 `endif
 
 endinterface // hwpe_stream_intf_tcdm
@@ -90,6 +92,7 @@ interface hwpe_stream_intf_stream (
   );
 
 `ifndef SYNTHESIS
+`ifndef VERILATOR
   // The data and strb can change their value 1) when valid is deasserted,
   // 2) in the cycle after a valid handshake, even if valid remains asserted.
   // In other words, valid data must remain on the interface until
@@ -98,7 +101,7 @@ interface hwpe_stream_intf_stream (
     @(posedge clk)
     ($past(valid) & ~($past(valid) & $past(ready))) |-> ((data == $past(data)) && (strb == $past(strb))) | BYPASS_VCR_ASSERT;
   endproperty;
-  
+
   // The deassertion of valid (transition 1í0) can happen only in the cycle
   // after a valid handshake. In other words, valid data produced by a source
   // must be consumed on the sink side before valid is deasserted.
@@ -112,6 +115,7 @@ interface hwpe_stream_intf_stream (
 
   HWPE_STREAM_VALID_DEASSERT: assert property(hwpe_stream_valid_deassert_rule)
     else `HWPE_ASSERT_SEVERITY("ASSERTION FAILURE HWPE_STREAM_VALID_DEASSERT", 1);
+`endif
 `endif
 
 endinterface // hwpe_stream_intf_stream

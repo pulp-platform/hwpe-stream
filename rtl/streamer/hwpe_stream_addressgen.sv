@@ -66,7 +66,7 @@ module hwpe_stream_addressgen
   logic [STEP-1:0] gen_strb_int;
   logic [STEP-1:0] gen_strb_r;
 
-  flags_addressgen_t flags;
+  flags_addressgen_t flags, flags_nb;
 
   assign base_addr      = ctrl_i.base_addr;
   assign trans_size_m2  = (misalignment == 1'b0) ? ctrl_i.trans_size - 2 :
@@ -92,11 +92,11 @@ module hwpe_stream_addressgen
   always_ff @(posedge clk_i or negedge rst_ni)
   begin
     if(~rst_ni)
-      flags.realign_flags.last_packet <= '0;
+      flags_nb.realign_flags.last_packet <= '0;
     else if(clear_i)
-      flags.realign_flags.last_packet <= '0;
+      flags_nb.realign_flags.last_packet <= '0;
     else if(enable_int)
-      flags.realign_flags.last_packet <= (misalignment==1'b1 && overall_counter == trans_size_m2) ? 1'b1 : 1'b0;
+      flags_nb.realign_flags.last_packet <= (misalignment==1'b1 && overall_counter == trans_size_m2) ? 1'b1 : 1'b0;
   end
 
   // flags generation
@@ -104,25 +104,25 @@ module hwpe_stream_addressgen
   begin
     if(enable_int == 1'b1) begin
       if(word_counter < line_length_m1) begin
-        flags.word_update = 1'b1;
-        flags.line_update = 1'b0;
-        flags.feat_update = 1'b0;
+        flags_nb.word_update = 1'b1;
+        flags_nb.line_update = 1'b0;
+        flags_nb.feat_update = 1'b0;
       end
       else if(line_counter < feat_length_m1) begin
-        flags.word_update = 1'b1;
-        flags.line_update = 1'b1;
-        flags.feat_update = 1'b0;
+        flags_nb.word_update = 1'b1;
+        flags_nb.line_update = 1'b1;
+        flags_nb.feat_update = 1'b0;
       end
       else begin
-        flags.word_update = 1'b1;
-        flags.line_update = 1'b1;
-        flags.feat_update = 1'b1;
+        flags_nb.word_update = 1'b1;
+        flags_nb.line_update = 1'b1;
+        flags_nb.feat_update = 1'b1;
       end
     end
     else begin
-      flags.word_update = 1'b0;
-      flags.line_update = 1'b0;
-      flags.feat_update = 1'b0;
+      flags_nb.word_update = 1'b0;
+      flags_nb.line_update = 1'b0;
+      flags_nb.feat_update = 1'b0;
     end
   end
 
@@ -130,10 +130,10 @@ module hwpe_stream_addressgen
   always_comb
   begin : misalignment_last_flags_comb
     if(word_counter < line_length_m1) begin
-      misalignment_last  <= '0;
+      misalignment_last  = '0;
     end
     else begin
-      misalignment_last  <= '1;
+      misalignment_last  = '1;
     end
   end
   always_comb
@@ -239,45 +239,41 @@ module hwpe_stream_addressgen
   logic overall_counter_is_0;
   assign overall_counter_is_0 = (overall_counter == '0) ? 1'b1 : 1'b0;
 
-  logic pippo;
-
   generate
     if((DECOUPLED == 0) && (REALIGN_TYPE == HWPE_STREAM_REALIGN_SOURCE)) begin
-      assign pippo = 1'b1;
       always_ff @(posedge clk_i or negedge rst_ni)
       begin
         if (rst_ni==1'b0)
-          flags.in_progress <= 1'b1;
+          flags_nb.in_progress <= 1'b1;
         else if (clear_i==1'b1)
-          flags.in_progress <= 1'b1;
+          flags_nb.in_progress <= 1'b1;
         else
           if(trans_size_m2 == '1)
-            flags.in_progress <= 1'b0;
+            flags_nb.in_progress <= 1'b0;
           else if (overall_counter < trans_size_m2)
-            flags.in_progress <= 1'b1;
+            flags_nb.in_progress <= 1'b1;
           else if ((overall_counter == trans_size_m2) && (enable_int == 1'b0))
-            flags.in_progress <= 1'b1;
+            flags_nb.in_progress <= 1'b1;
           else
-            flags.in_progress <= 1'b0;
+            flags_nb.in_progress <= 1'b0;
       end
     end
     else begin
-      assign pippo = 1'b0;
       always_ff @(posedge clk_i or negedge rst_ni)
       begin
         if (rst_ni==1'b0)
-          flags.in_progress <= 1'b1;
+          flags_nb.in_progress <= 1'b1;
         else if (clear_i==1'b1)
-          flags.in_progress <= 1'b1;
+          flags_nb.in_progress <= 1'b1;
         else
           if(trans_size_m2_is_ffff)
-            flags.in_progress <= overall_counter_is_0;
+            flags_nb.in_progress <= overall_counter_is_0;
           else if (overall_counter < trans_size_m2)
-            flags.in_progress <= 1'b1;
+            flags_nb.in_progress <= 1'b1;
           else if ((overall_counter == trans_size_m2) && (enable_int == 1'b0))
-            flags.in_progress <= 1'b1;
+            flags_nb.in_progress <= 1'b1;
           else
-            flags.in_progress <= 1'b0;
+            flags_nb.in_progress <= 1'b0;
       end
     end
   endgenerate
@@ -313,12 +309,16 @@ module hwpe_stream_addressgen
     end
   end
 
-  assign flags.realign_flags.enable  = misalignment;
-  assign flags.realign_flags.realign = misalignment;
-  assign flags.realign_flags.first   = misalignment_first;
-  assign flags.realign_flags.last    = misalignment_last;
-  assign flags.realign_flags.line_length = ctrl_i.line_length;
-  assign flags.realign_flags.strb_valid = '1;
+  always_comb
+  begin
+    flags = flags_nb;
+    flags.realign_flags.enable  = misalignment;
+    flags.realign_flags.realign = misalignment;
+    flags.realign_flags.first   = misalignment_first;
+    flags.realign_flags.last    = misalignment_last;
+    flags.realign_flags.line_length = ctrl_i.line_length;
+    flags.realign_flags.strb_valid = '1;
+  end
 
   generate
 
