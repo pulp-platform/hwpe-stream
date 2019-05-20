@@ -117,6 +117,7 @@ module hwpe_stream_sink
   logic done;
 
   logic clk_realign_gated;
+  logic clk_realign_en /* verilator clock_enable */;
   logic [NB_TCDM_PORTS-1:0] tcdm_inflight;
   logic tcdm_inflight_any;
 
@@ -163,11 +164,12 @@ module hwpe_stream_sink
   );
 
   /* clock gating */
+  assign clk_realign_en = flags_o.addressgen_flags.realign_flags.enable;
   cluster_clock_gating i_realign_gating (
-    .clk_i     ( clk_i                                         ),
-    .test_en_i ( test_mode_i                                   ),
-    .en_i      ( flags_o.addressgen_flags.realign_flags.enable ),
-    .clk_o     ( clk_realign_gated                             )
+    .clk_i     ( clk_i             ),
+    .test_en_i ( test_mode_i       ),
+    .en_i      ( clk_realign_en    ),
+    .clk_o     ( clk_realign_gated )
   );
 
   hwpe_stream_sink_realign #(
@@ -187,7 +189,7 @@ module hwpe_stream_sink
   generate
     for(genvar ii=0; ii<NB_TCDM_PORTS; ii++) begin: tcdm_binding
 
-      if(USE_TCDM_FIFOS) begin: tcdm_fifos_gen
+      if(USE_TCDM_FIFOS != 0) begin: tcdm_fifos_gen
 
         assign tcdm_prefifo[ii].req  = (cs == STREAM_WORKING) ? split_streams[ii].valid : '0;
         assign tcdm_prefifo[ii].add  = (cs == STREAM_WORKING) ? gen_addr + ii*4         : '0;

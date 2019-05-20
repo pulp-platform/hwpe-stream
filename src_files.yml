@@ -39,6 +39,7 @@ hwpe-stream:
 tb_hwpe_stream:
   flags: [
     skip_synthesis,
+    skip_verilator,
   ]
   files: [
     tb/tb_hwpe_stream_reservoir.sv,
@@ -49,6 +50,7 @@ tb_hwpe_stream_local:
   flags: [
     only_local,
     skip_synthesis,
+    skip_verilator,
   ]
   files: [
     tb/tb_hwpe_stream_sink_realign.sv,

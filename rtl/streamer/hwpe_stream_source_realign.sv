@@ -124,7 +124,7 @@ module hwpe_stream_source_realign #(
   // since the source address generation could be decoupled from the received stream
   // (e.g. in case the load TCDM passes through FIFOs)
   generate
-    if(DECOUPLED) begin : decoupled_flags_gen
+    if(DECOUPLED != 0) begin : decoupled_flags_gen
 
       logic [15:0] word_cnt, next_word_cnt;
       logic [15:0] line_length_m1;
@@ -333,6 +333,6 @@ module hwpe_stream_source_realign #(
 
   assign pop_o.strb = '1;
 
-  assign flags_o.decoupled_stall = (strb_first_cnt >= STRB_FIFO_DEPTH-4 || strb_first_cnt >= STRB_FIFO_DEPTH-4) ? '1 : '0;
+  assign flags_o.decoupled_stall = ($signed(strb_first_cnt) >= $signed(STRB_FIFO_DEPTH-4)) ? '1 : '0;
 
 endmodule // hwpe_stream_source_realign

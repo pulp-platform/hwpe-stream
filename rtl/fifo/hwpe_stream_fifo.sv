@@ -111,13 +111,36 @@ module hwpe_stream_fifo #(
     end
   end
 
+  // drive ready/valid (a separte always_comb is necessary for Verilator)
+  always_comb
+  begin
+    push_i.ready = 1'b0;
+    pop_o.valid = 1'b0;
+    case(cs)
+      EMPTY: begin
+        push_i.ready = 1'b1;
+        pop_o.valid = 1'b0;
+      end
+      MIDDLE: begin
+        push_i.ready = 1'b1;
+        pop_o.valid = 1'b1;
+      end
+      FULL: begin
+        push_i.ready = 1'b0;
+        pop_o.valid = 1'b1;
+      end
+      default : begin
+        push_i.ready = 1'b0;
+        pop_o.valid = 1'b0;
+      end
+    endcase
+  end
+
   // Compute Next State
   always_comb
   begin
     case(cs)
       EMPTY: begin
-        push_i.ready = 1'b1;
-        pop_o.valid = 1'b0;
         case(push_i.valid)
           1'b0 : begin
             ns = EMPTY;
@@ -132,8 +155,6 @@ module hwpe_stream_fifo #(
         endcase
       end
       MIDDLE: begin
-        push_i.ready = 1'b1;
-        pop_o.valid = 1'b1;
         case({push_i.valid,pop_o.ready})
           2'b01 : begin
             if((pop_pointer_q == push_pointer_q -1 ) || ((pop_pointer_q == FIFO_DEPTH-1) && (push_pointer_q == 0) ))
@@ -177,8 +198,6 @@ module hwpe_stream_fifo #(
         endcase
       end
       FULL : begin
-        push_i.ready = 1'b0;
-        pop_o.valid = 1'b1;
         case(pop_o.ready)
           1'b1 : begin
             ns = MIDDLE;
@@ -196,8 +215,6 @@ module hwpe_stream_fifo #(
         endcase
       end
       default : begin
-        push_i.ready = 1'b0;
-        pop_o.valid = 1'b0;
         ns = EMPTY;
         pop_pointer_d = 0;
         push_pointer_d = 0;

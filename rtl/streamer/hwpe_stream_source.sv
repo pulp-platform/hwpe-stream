@@ -205,7 +205,7 @@ module hwpe_stream_source
   // tcdm ports binding
   generate
 
-    if(DECOUPLED) begin : fence_gen
+    if(DECOUPLED != 0) begin : fence_gen
 
       hwpe_stream_fifo #(
         .DATA_WIDTH ( DATA_WIDTH ),
@@ -345,7 +345,7 @@ module hwpe_stream_source
 
   generate
 
-    if(DECOUPLED) begin : decoupled_ctrl_gen
+    if(DECOUPLED != 0) begin : decoupled_ctrl_gen
 
       logic [TRANS_CNT-1:0] request_cnt_q, request_cnt_d;
 

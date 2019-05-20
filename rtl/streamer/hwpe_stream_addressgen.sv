@@ -172,7 +172,7 @@ module hwpe_stream_addressgen
   logic        misalignment_first;
   logic        misalignment_last;
   logic [31:0] gen_addr_int;
-  logic        enable_int;
+  logic        enable_int /*verilator clock_enable*/;
   logic        last_packet;
 
   logic [TRANS_CNT-1:0] overall_counter;
@@ -467,7 +467,7 @@ module hwpe_stream_addressgen
     assign flags_o.feat_update = aux.feat_update;
     assign flags_o.in_progress = aux.in_progress;
 
-    if(DELAY_FLAGS) begin : delay_flags_gen
+    if(DELAY_FLAGS != 0) begin : delay_flags_gen
 
       // this is required to align the flags with the TCDM response phase
       // in some accelerators (it can be disabled, or done externally)
