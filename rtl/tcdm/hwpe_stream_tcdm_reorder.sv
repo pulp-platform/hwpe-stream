@@ -134,10 +134,10 @@ module hwpe_stream_tcdm_reorder
 
     always_comb
     begin : mux_resp_comb
+      in_r_data  = '0;
+      in_r_valid = '0;
+      in_gnt     = '0;
       for(int i=0; i<NB_CHAN; i++) begin
-        in_r_data[i] = '0;
-        in_r_valid[i] = 1'b0;
-        in_gnt  [i] = 1'b0;
         in_r_data [winner_q[i]] = out_r_data[i];
         in_r_valid[winner_q[i]] = out_r_valid[i] & out_req_q[i];
         in_gnt    [winner[i]] = out_gnt[i];
