@@ -16,8 +16,6 @@
  * of random
  */
 
-timeunit 1ns;
-timeprecision 1ps;
 
 import hwpe_stream_package::*;
 
@@ -41,6 +39,9 @@ module tb_hwpe_stream_reservoir
   input  logic                   enable_i,
   hwpe_stream_intf_stream.source data_o
 );
+
+  timeunit 1ns;
+  timeprecision 1ps;
 
   logic [RESERVOIR_SIZE-1:0][DATA_WIDTH-1:0]   reservoir;
   logic [RESERVOIR_SIZE-1:0][DATA_WIDTH/8-1:0] reservoir_strb;

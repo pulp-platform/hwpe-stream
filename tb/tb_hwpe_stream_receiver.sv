@@ -16,8 +16,6 @@
  * of random
  */
 
-timeunit 1ns;
-timeprecision 1ps;
 
 module tb_hwpe_stream_receiver
 #(
@@ -33,6 +31,9 @@ module tb_hwpe_stream_receiver
   input  logic                 enable_i,
   hwpe_stream_intf_stream.sink data_i
 );
+
+  timeunit 1ns;
+  timeprecision 1ps;
 
   always
   begin
