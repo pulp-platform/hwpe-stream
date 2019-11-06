@@ -8,6 +8,7 @@ hwpe-stream:
   files: [
     rtl/hwpe_stream_package.sv,
     rtl/hwpe_stream_interfaces.sv,
+    rtl/basic/hwpe_stream_assign.sv,
     rtl/basic/hwpe_stream_mux_static.sv,
     rtl/basic/hwpe_stream_demux_static.sv,
     rtl/basic/hwpe_stream_buffer.sv,
@@ -30,6 +31,7 @@ hwpe-stream:
     rtl/tcdm/hwpe_stream_tcdm_fifo_load.sv,
     rtl/tcdm/hwpe_stream_tcdm_fifo_load_sidech.sv,
     rtl/tcdm/hwpe_stream_tcdm_fifo_store.sv,
+    rtl/tcdm/hwpe_stream_tcdm_fifo.sv,
     rtl/tcdm/hwpe_stream_tcdm_mux.sv,
     rtl/tcdm/hwpe_stream_tcdm_mux_static.sv,
     rtl/tcdm/hwpe_stream_tcdm_reorder.sv,
