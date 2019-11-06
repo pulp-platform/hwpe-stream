@@ -211,7 +211,10 @@ module hwpe_stream_tcdm_fifo #(
   assign stream_outgoing_push.valid = tcdm_slave.req;
   assign tcdm_slave.gnt = stream_outgoing_push.ready;
 
-  assign { >> { tcdm_master.add, tcdm_master.data, tcdm_master.be, tcdm_master.wen }} = stream_outgoing_pop.data;
+  assign tcdm_master.add  = stream_outgoing_pop.data [32+32+4+1-1:32+4+1];
+  assign tcdm_master.data = stream_outgoing_pop.data [32+4+1-1:4+1];
+  assign tcdm_master.be   = stream_outgoing_pop.data [4+1-1:1];
+  assign tcdm_master.wen  = stream_outgoing_pop.data [0];
   assign tcdm_master.req = stream_outgoing_pop.valid & incoming_fifo_not_full;
   assign stream_outgoing_pop.ready = tcdm_master.gnt; // if incoming_fifo_not_full=0, gnt is already 0, because req=0
 
