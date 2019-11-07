@@ -45,7 +45,7 @@
  *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
  *   | **Name**          | **Default** | **Description**                                                                                                        |
  *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
- *   | *USE_TCDM_FIFOS*  | 0           | If 1, the module produces a HWPE-MemDecoupled interface and includes a TCDM FIFO directly inside.                      |
+ *   | *TCDM_FIFO_DEPTH* | 2           | If >0, the module produces a HWPE-MemDecoupled interface and includes a TCDM FIFO of this depth.                       |
  *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
  *   | *DATA_WIDTH*      | 32          | Width of input/output streams.                                                                                         |
  *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
@@ -91,7 +91,7 @@ module hwpe_stream_sink
   // Stream interface params
   parameter int unsigned DATA_WIDTH     = 32,
   parameter int unsigned NB_TCDM_PORTS  = DATA_WIDTH/32,
-  parameter int unsigned USE_TCDM_FIFOS = 1
+  parameter int unsigned TCDM_FIFO_DEPTH = 2
 )
 (
   input logic clk_i,
@@ -189,7 +189,7 @@ module hwpe_stream_sink
   generate
     for(genvar ii=0; ii<NB_TCDM_PORTS; ii++) begin: tcdm_binding
 
-      if(USE_TCDM_FIFOS != 0) begin: tcdm_fifos_gen
+      if(TCDM_FIFO_DEPTH > 0) begin: tcdm_fifos_gen
 
         assign tcdm_prefifo[ii].req  = (cs == STREAM_WORKING) ? split_streams[ii].valid : '0;
         assign tcdm_prefifo[ii].add  = (cs == STREAM_WORKING) ? gen_addr + ii*4         : '0;
@@ -199,7 +199,7 @@ module hwpe_stream_sink
         assign split_streams[ii].ready = ~split_streams[ii].valid | tcdm_prefifo[ii].gnt;
 
         hwpe_stream_tcdm_fifo_store #(
-          .FIFO_DEPTH ( 4 )
+          .FIFO_DEPTH ( TCDM_FIFO_DEPTH )
         ) i_tcdm_fifo (
           .clk_i       ( clk_i             ),
           .rst_ni      ( rst_ni            ),
