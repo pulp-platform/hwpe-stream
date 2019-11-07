@@ -94,6 +94,7 @@ module hwpe_stream_sink
   parameter int unsigned DATA_WIDTH      = 32,
   parameter int unsigned NB_TCDM_PORTS   = DATA_WIDTH/32,
   parameter int unsigned REALIGNABLE     = 1,
+  parameter int unsigned LATCH_FIFO      = 0,
   parameter int unsigned TCDM_FIFO_DEPTH = 2
 )
 (
@@ -212,7 +213,8 @@ module hwpe_stream_sink
         assign split_streams[ii].ready = ~split_streams[ii].valid | tcdm_prefifo[ii].gnt;
 
         hwpe_stream_tcdm_fifo_store #(
-          .FIFO_DEPTH ( TCDM_FIFO_DEPTH )
+          .FIFO_DEPTH ( TCDM_FIFO_DEPTH ),
+          .LATCH_FIFO ( LATCH_FIFO      )
         ) i_tcdm_fifo (
           .clk_i       ( clk_i             ),
           .rst_ni      ( rst_ni            ),
