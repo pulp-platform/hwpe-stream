@@ -53,6 +53,8 @@
  *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
  *   | *TRANS_CNT*       | 16          | Number of bits supported in the transaction counter of the address generator, which will overflow at 2^ `TRANS_CNT`.   |
  *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | *REALIGNABLE*     | 1           | If set to 0, the sink will not support non-word-aligned HWPE-Mem accesses.                                             |
+ *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
  *
  * .. tabularcolumns:: |l|l|J|
  * .. _hwpe_stream_sink_ctrl:
@@ -89,8 +91,9 @@ import hwpe_stream_package::*;
 module hwpe_stream_sink
 #(
   // Stream interface params
-  parameter int unsigned DATA_WIDTH     = 32,
-  parameter int unsigned NB_TCDM_PORTS  = DATA_WIDTH/32,
+  parameter int unsigned DATA_WIDTH      = 32,
+  parameter int unsigned NB_TCDM_PORTS   = DATA_WIDTH/32,
+  parameter int unsigned REALIGNABLE     = 1,
   parameter int unsigned TCDM_FIFO_DEPTH = 2
 )
 (
@@ -172,18 +175,28 @@ module hwpe_stream_sink
     .clk_o     ( clk_realign_gated )
   );
 
-  hwpe_stream_sink_realign #(
-    .DATA_WIDTH ( DATA_WIDTH )
-  ) i_realign (
-    .clk_i       ( clk_realign_gated                      ),
-    .rst_ni      ( rst_ni                                 ),
-    .test_mode_i ( test_mode_i                            ),
-    .clear_i     ( clear_i                                ),
-    .ctrl_i      ( flags_o.addressgen_flags.realign_flags ),
-    .strb_i      ( gen_strb                               ),
-    .push_i      ( stream                                 ),
-    .pop_o       ( realigned_stream                       )
-  );
+  generate
+    if (REALIGNABLE) begin : realign_gen
+      hwpe_stream_sink_realign #(
+        .DATA_WIDTH ( DATA_WIDTH )
+      ) i_realign (
+        .clk_i       ( clk_realign_gated                      ),
+        .rst_ni      ( rst_ni                                 ),
+        .test_mode_i ( test_mode_i                            ),
+        .clear_i     ( clear_i                                ),
+        .ctrl_i      ( flags_o.addressgen_flags.realign_flags ),
+        .strb_i      ( gen_strb                               ),
+        .push_i      ( stream                                 ),
+        .pop_o       ( realigned_stream                       )
+      );
+    end
+    else begin : no_realign_gen
+      hwpe_stream_assign i_no_realign (
+        .push_i ( stream           ),
+        .pop_o  ( realigned_stream )
+      );
+    end
+  endgenerate
 
   // tcdm ports binding
   generate

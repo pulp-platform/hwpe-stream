@@ -57,6 +57,8 @@
  *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
  *   | *TRANS_CNT*       | 16          | Number of bits supported in the transaction counter of the address generator, which will overflow at 2^ `TRANS_CNT`.   |
  *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | *REALIGNABLE*     | 1           | If set to 0, the source will not support non-word-aligned HWPE-Mem accesses.                                           |
+ *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
  *
  * .. tabularcolumns:: |l|l|J|
  * .. _hwpe_stream_source_ctrl:
@@ -93,11 +95,12 @@ import hwpe_stream_package::*;
 module hwpe_stream_source
 #(
   // Stream interface params
-  parameter int unsigned DATA_WIDTH = 32,
+  parameter int unsigned DATA_WIDTH    = 32,
   parameter int unsigned NB_TCDM_PORTS = DATA_WIDTH/32,
-  parameter int unsigned DECOUPLED = 0,
-  parameter int unsigned LATCH_FIFO  = 0,
-  parameter int unsigned TRANS_CNT = 16
+  parameter int unsigned DECOUPLED     = 0,
+  parameter int unsigned LATCH_FIFO    = 0,
+  parameter int unsigned REALIGNABLE   = 1,
+  parameter int unsigned TRANS_CNT     = 16
 )
 (
   input logic clk_i,
@@ -187,20 +190,30 @@ module hwpe_stream_source
   );
 
   // realign the merged stream
-  hwpe_stream_source_realign #(
-    .DECOUPLED  ( DECOUPLED  ),
-    .DATA_WIDTH ( DATA_WIDTH )
-  ) i_realign (
-    .clk_i      ( clk_i                                  ),
-    .rst_ni     ( rst_ni                                 ),
-    .test_mode_i( test_mode_i                            ),
-    .clear_i    ( clear_i                                ),
-    .ctrl_i     ( flags_o.addressgen_flags.realign_flags ),
-    .flags_o    (                                        ),
-    .strb_i     ( gen_strb                               ),
-    .push_i     ( misaligned_fifo_stream                 ),
-    .pop_o      ( stream                                 )
-  );
+  generate
+    if (REALIGNABLE) begin : realign_gen
+      hwpe_stream_source_realign #(
+        .DECOUPLED  ( DECOUPLED  ),
+        .DATA_WIDTH ( DATA_WIDTH )
+      ) i_realign (
+        .clk_i      ( clk_i                                  ),
+        .rst_ni     ( rst_ni                                 ),
+        .test_mode_i( test_mode_i                            ),
+        .clear_i    ( clear_i                                ),
+        .ctrl_i     ( flags_o.addressgen_flags.realign_flags ),
+        .flags_o    (                                        ),
+        .strb_i     ( gen_strb                               ),
+        .push_i     ( misaligned_fifo_stream                 ),
+        .pop_o      ( stream                                 )
+      );
+    end
+    else begin : no_realign_gen
+      hwpe_stream_assign i_no_realign (
+        .push_i ( misaligned_fifo_stream ),
+        .pop_o  ( stream                 )
+      );
+    end
+  endgenerate
 
   // tcdm ports binding
   generate
