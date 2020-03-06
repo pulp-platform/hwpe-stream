@@ -78,7 +78,7 @@ module hwpe_stream_fence #(
           data_q[ii] <= '0;
         else if(clear_i)
           data_q[ii] <= '0;
-        else if(~(fence_state_d[ii] && fence_state_q[ii]))
+        else if(in_valid[ii] && ~fence_state_q[ii])
           data_q[ii] <= push_i[ii].data;
       end
 
@@ -88,7 +88,7 @@ module hwpe_stream_fence #(
           strb_q[ii] <= '0;
         else if(clear_i)
           strb_q[ii] <= '0;
-        else if(~(fence_state_d[ii] && fence_state_q[ii]))
+        else if(in_valid[ii] && ~fence_state_q[ii])
           strb_q[ii] <= push_i[ii].strb;
       end
 
