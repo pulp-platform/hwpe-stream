@@ -1,4 +1,4 @@
-/* 
+/*
  * tb_hwpe_stream_reservoir.sv
  * Francesco Conti <fconti@iis.ee.ethz.ch>
  *
@@ -70,74 +70,72 @@ module tb_hwpe_stream_reservoir
 
     if(REALIGN_TYPE == HWPE_STREAM_REALIGN_SOURCE) begin : realign_source_gen
 
-      always
+      always_ff @(posedge clk_i)
       begin
         if(new_rotation_i) begin
           automatic logic strb_start = rotation_i;
           for(int i=0; i<strb_start; i++)
-            data_o.strb[i] <= #TA 1'b0;
+            data_o.strb[i] <= 1'b0;
           for(int i=strb_start; i<DATA_WIDTH/8; i++)
-            data_o.strb[i] <= #TA 1'b1;
+            data_o.strb[i] <= 1'b1;
         end
         else begin
-          data_o.strb <= #TA '1;
+          data_o.strb <= '1;
         end
         if(enable_i) begin
           // try to push a new packet if the slave is ready or the
           // last packet is not valid
           if ((data_o.ready == 1'b1) || (data_o.valid == 1'b0)) begin
             if (($urandom_range(0, 1000) < PROB_STALL*1000) && (force_valid_i!=1'b1)) begin
-              data_o.valid <= #TA 1'b0;
-              data_o.data  <= #TA 'x;
+              data_o.valid <= 1'b0;
+              data_o.data  <= 'x;
             end
             else begin
-              data_o.valid <= #TA ~force_invalid_i | force_valid_i;
-              data_o.data  <= #TA reservoir[cnt];
+              data_o.valid <= ~force_invalid_i | force_valid_i;
+              data_o.data  <= reservoir[cnt];
               cnt = (cnt == RESERVOIR_SIZE-1) ? 0 : cnt+1;
             end
           end
           else begin
-            data_o.valid <= #TA (data_o.valid & ~force_invalid_i) | force_valid_i;
-            data_o.data  <= #TA data_o.data;
+            data_o.valid <= (data_o.valid & ~force_invalid_i) | force_valid_i;
+            data_o.data  <= data_o.data;
           end
         end
         else begin
-          data_o.valid <= #TA 1'b0;
-          data_o.data  <= #TA '0;
+          data_o.valid <= 1'b0;
+          data_o.data  <= '0;
         end
-        #(TCP);
       end
 
     end // realign_source_gen
     else begin : realign_sink_gen
 
-      always
+      always_ff @(posedge clk_i)
       begin
-        data_o.strb <= #TA '1;
+        data_o.strb <= '1;
         if(enable_i) begin
           // try to push a new packet if the slave is ready or the
           // last packet is not valid
           if ((data_o.ready == 1'b1) || (data_o.valid == 1'b0)) begin
             if (($urandom_range(0, 1000) < PROB_STALL*1000) && (force_valid_i!=1'b1)) begin
-              data_o.valid <= #TA 1'b0;
-              data_o.data  <= #TA 'x;
+              data_o.valid <= 1'b0;
+              data_o.data  <= 'x;
             end
             else begin
-              data_o.valid <= #TA ~force_invalid_i | force_valid_i;
-              data_o.data  <= #TA reservoir[cnt];
+              data_o.valid <= ~force_invalid_i | force_valid_i;
+              data_o.data  <= reservoir[cnt];
               cnt = (cnt == RESERVOIR_SIZE-1) ? 0 : cnt+1;
             end
           end
           else begin
-            data_o.valid <= #TA (data_o.valid & ~force_invalid_i) | force_valid_i;
-            data_o.data  <= #TA data_o.data;
+            data_o.valid <= (data_o.valid & ~force_invalid_i) | force_valid_i;
+            data_o.data  <= data_o.data;
           end
         end
         else begin
-          data_o.valid <= #TA 1'b0;
-          data_o.data  <= #TA '0;
+          data_o.valid <= 1'b0;
+          data_o.data  <= '0;
         end
-        #(TCP);
       end
 
     end // realign_sink_gen

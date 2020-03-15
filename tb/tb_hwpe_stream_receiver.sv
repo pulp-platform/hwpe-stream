@@ -1,4 +1,4 @@
-/* 
+/*
  * tb_hwpe_stream_receiver.sv
  * Francesco Conti <fconti@iis.ee.ethz.ch>
  *
@@ -34,20 +34,28 @@ module tb_hwpe_stream_receiver
   hwpe_stream_intf_stream.sink data_i
 );
 
-  always
+  logic data_ready;
+
+  always_ff @(posedge clk_i)
   begin
-    automatic int cnt = 0;
     if (force_ready_i)
-      data_i.ready <= #TA 1'b1;
+      data_ready <= 1'b1;
     else if(enable_i) begin
       if ((data_i.valid == 1'b1) || (data_i.ready == 1'b0)) begin
-        if ($urandom_range(0, 1000) <= PROB_STALL*1000)
-          data_i.ready <= #TA 1'b0;
+        if ($urandom_range(0, 1000) < PROB_STALL*1000)
+          data_i.ready <= 1'b0;
         else
-          data_i.ready <= #TA 1'b1;
+          data_i.ready <= 1'b1;
       end
     end
-    #(TCP);
+    else begin
+      data_ready <= 1'b0;
+    end
+  end
+
+  always @(data_ready)
+  begin
+    data_i.ready = data_ready;
   end
 
 endmodule // tb_hwpe_stream_reservoir

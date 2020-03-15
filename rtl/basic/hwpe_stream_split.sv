@@ -59,8 +59,8 @@ module hwpe_stream_split #(
   hwpe_stream_intf_stream.source pop_o [NB_OUT_STREAMS-1:0]
 );
 
-  parameter DATA_WIDTH_OUT = DATA_WIDTH_IN/NB_OUT_STREAMS;
-  parameter STRB_WIDTH_OUT = DATA_WIDTH_OUT/8;
+  parameter int unsigned DATA_WIDTH_OUT = DATA_WIDTH_IN/NB_OUT_STREAMS;
+  parameter int unsigned STRB_WIDTH_OUT = DATA_WIDTH_OUT/8;
 
   logic [NB_OUT_STREAMS-1:0] stream_ready;
 
