@@ -1,8 +1,8 @@
 /*
- * hwpe_stream_addressgen.sv
+ * hwpe_stream_addressgen_v2.sv
  * Francesco Conti <f.conti@unibo.it>
  *
- * Copyright (C) 2014-2018 ETH Zurich, University of Bologna
+ * Copyright (C) 2014-2020 ETH Zurich, University of Bologna
  * Copyright and related rights are licensed under the Solderpad Hardware
  * License, Version 0.51 (the "License"); you may not use this file except in
  * compliance with the License.  You may obtain a copy of the License at
