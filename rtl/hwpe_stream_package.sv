@@ -39,8 +39,6 @@ package hwpe_stream_package;
     logic        [31:0] word_length;
     logic signed [15:0] line_stride;
     logic        [31:0] line_length;
-    logic        [15:0] feat_length;
-    logic        [7:0]  line_length_remainder; // in bytes
   } ctrl_addressgen_v2_t;
 
   typedef struct packed {

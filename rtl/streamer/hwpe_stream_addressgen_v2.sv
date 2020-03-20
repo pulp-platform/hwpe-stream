@@ -139,7 +139,7 @@ module hwpe_stream_addressgen_v2
       addr_valid_q      <= '0;
     end
     else if (clear_i) begin
-      word_addr_q       <= 32'hfffffffc;
+      word_addr_q       <= -word_stride;
       line_addr_q       <= '0;
       word_counter_q    <= '0;
       line_counter_q    <= '0;
