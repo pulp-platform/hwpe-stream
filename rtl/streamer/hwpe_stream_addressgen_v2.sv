@@ -28,6 +28,7 @@ module hwpe_stream_addressgen_v2
   // local enable and clear
   input  logic                   enable_i,
   input  logic                   clear_i,
+  input  logic                   presample_i,
   // generated output address
   hwpe_stream_intf_stream.source addr_o,
   // control channel
@@ -129,9 +130,24 @@ module hwpe_stream_addressgen_v2
 
   // address generation
   always_ff @(posedge clk_i or negedge rst_ni)
+  begin : address_gen_counters_word_ff
+    if (~rst_ni) begin
+      word_addr_q <= '0;
+    end
+    else if (clear_i) begin
+      word_addr_q <= '0;
+    end
+    else if (presample_i) begin
+      word_addr_q <= '0;
+    end
+    else if (enable_i) begin
+      word_addr_q <= word_addr_d;
+    end
+  end
+  
+  always_ff @(posedge clk_i or negedge rst_ni)
   begin : address_gen_counters_ff
     if (~rst_ni) begin
-      word_addr_q       <= '0;
       line_addr_q       <= '0;
       word_counter_q    <= '0;
       line_counter_q    <= '0;
@@ -139,7 +155,6 @@ module hwpe_stream_addressgen_v2
       addr_valid_q      <= '0;
     end
     else if (clear_i) begin
-      word_addr_q       <= -word_stride;
       line_addr_q       <= '0;
       word_counter_q    <= '0;
       line_counter_q    <= '0;
@@ -147,7 +162,6 @@ module hwpe_stream_addressgen_v2
       addr_valid_q      <= '0;
     end
     else if(enable_i) begin
-      word_addr_q       <= word_addr_d;
       line_addr_q       <= line_addr_d;
       word_counter_q    <= word_counter_d;
       line_counter_q    <= line_counter_d;
