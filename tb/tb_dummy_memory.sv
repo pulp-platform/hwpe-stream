@@ -138,7 +138,7 @@ module tb_dummy_memory
     tcdm_r_valid <= tcdm_r_valid_int;
   end
 
-  generate;
+  generate
     if(INSTRUMENTATION) begin
       for(genvar ii=0; ii<MP; ii++) begin
         always begin
