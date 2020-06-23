@@ -90,4 +90,12 @@ package hwpe_stream_package;
     STREAM_IDLE, STREAM_WORKING, STREAM_DONE
   } state_sourcesink_t;
 
+  // serialize/deserialize related types
+  parameter int unsigned NB_SERDES_STREAMS_MAX = 1024;
+
+  typedef struct packed {
+    logic [$clog2(NB_SERDES_STREAMS_MAX)-1:0] first_stream;
+    logic                                     clear_serdes_state;
+  } ctrl_serdes_t;
+
 endpackage
