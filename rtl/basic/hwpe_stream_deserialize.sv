@@ -54,7 +54,6 @@ module hwpe_stream_deserialize #(
   input  logic                   clk_i,
   input  logic                   rst_ni,
   input  logic                   clear_i,
-  input  logic                   enable_i,
 
   input  ctrl_serdes_t           ctrl_i,
   hwpe_stream_intf_stream.sink   push_i,
@@ -87,7 +86,7 @@ module hwpe_stream_deserialize #(
     else if(clear_i) begin
       stream_cnt_q <= '0;
     end
-    else if(enable_i) begin
+    else if(push_i.valid & push_i.ready) begin
       stream_cnt_q <= stream_cnt_d;
     end
   end
@@ -98,7 +97,7 @@ module hwpe_stream_deserialize #(
     if(ctrl_i.clear_serdes_state) begin
       stream_cnt_d = ctrl_i.first_stream;
     end
-    else if(push_i.valid & push_i.ready) begin
+    else begin
       if(stream_cnt_q < NB_OUT_STREAMS-1) begin
         stream_cnt_d = stream_cnt_q + 1;
       end

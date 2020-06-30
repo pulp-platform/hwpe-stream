@@ -26,6 +26,7 @@ hwpe-stream:
     rtl/fifo/hwpe_stream_fifo_ctrl.sv,
     rtl/streamer/hwpe_stream_addressgen.sv,
     rtl/streamer/hwpe_stream_addressgen_v2.sv,
+    rtl/streamer/hwpe_stream_addressgen_v3.sv,
     rtl/streamer/hwpe_stream_strbgen.sv,
     rtl/streamer/hwpe_stream_sink.sv,
     rtl/streamer/hwpe_stream_sink_realign.sv,

@@ -35,11 +35,22 @@ package hwpe_stream_package;
 
   typedef struct packed {
     logic        [31:0] base_addr;
-    logic signed [15:0] word_stride;
+    logic signed [31:0] word_stride;
     logic        [31:0] word_length;
-    logic signed [15:0] line_stride;
+    logic signed [31:0] line_stride;
     logic        [31:0] line_length;
   } ctrl_addressgen_v2_t;
+
+  typedef struct packed {
+    logic        [31:0] base_addr;
+    logic        [31:0] tot_len;    // former word_length
+    logic        [31:0] d0_len;     // former line_length
+    logic signed [31:0] d0_stride;  // former word_stride
+    logic        [31:0] d1_len;     // former block_length
+    logic signed [31:0] d1_stride;  // former line_stride
+    logic signed [31:0] d2_stride;  // former block_stride
+    logic         [1:0] dim_enable_1h;
+  } ctrl_addressgen_v3_t;
 
   typedef struct packed {
     logic enable;
@@ -66,6 +77,10 @@ package hwpe_stream_package;
   typedef struct packed {
     logic done;
   } flags_addressgen_v2_t;
+
+  typedef struct packed {
+    logic done;
+  } flags_addressgen_v3_t;
 
   typedef struct packed {
     logic empty;
