@@ -17,8 +17,8 @@ import hwpe_stream_package::*;
 
 module hwpe_stream_addressgen_v3
 #(
-  parameter int unsigned TRANS_CNT    = 32,
-  parameter int unsigned CNT          = 32 // number of bits used within the internal counter
+  parameter int unsigned TRANS_CNT  = 32,
+  parameter int unsigned CNT        = 32  // number of bits used within the internal counter
 )
 (
   // global signals
@@ -59,9 +59,6 @@ module hwpe_stream_addressgen_v3
   logic [31:0]          d2_addr_q;
 
   logic        addr_valid_d, addr_valid_q;
-  logic [35:0] addr_data;
-
-  logic [3:0] gen_strb_int;
 
   assign d0_stride   = $signed(ctrl_i.d0_stride);
   assign d1_stride   = $signed(ctrl_i.d1_stride);
@@ -158,12 +155,9 @@ module hwpe_stream_addressgen_v3
   end
 
   assign gen_addr_int = ctrl_i.base_addr + d2_addr_q + d1_addr_q + d0_addr_q;
-  assign gen_strb_int = '1;
 
-  assign addr_data = { 6'b0, gen_addr_int[31:2] }; // data also includes flags
-
-  assign addr_o.data  = addr_data;
-  assign addr_o.strb  = gen_strb_int;
+  assign addr_o.data  = gen_addr_int;
+  assign addr_o.strb  = '1;
   assign addr_o.valid = addr_valid_q;
 
   assign flags_o.done = done;
