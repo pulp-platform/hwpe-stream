@@ -68,7 +68,7 @@ endinterface // hwpe_stream_intf_tcdm
 interface hwpe_stream_intf_stream (
   input logic clk
 );
-  parameter int unsigned DATA_WIDTH = -1;
+  parameter int unsigned DATA_WIDTH = 2;
 `ifndef SYNTHESIS
   parameter bit BYPASS_VCR_ASSERT = 1'b0;
   parameter bit BYPASS_VDR_ASSERT = 1'b0;
