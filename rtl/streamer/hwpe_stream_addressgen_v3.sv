@@ -79,11 +79,11 @@ module hwpe_stream_addressgen_v3
     if(addr_o.ready) begin
       if(overall_counter_q < ctrl_i.tot_len) begin
         addr_valid_d = 1'b1;
-        if((d0_counter_q < ctrl_i.d0_len) || (ctrl_i.dim_enable_1h[0] == 1'b1)) begin
+        if((d0_counter_q < ctrl_i.d0_len) || (ctrl_i.dim_enable_1h[0] == 1'b0)) begin
           d0_addr_d    = d0_addr_q + d0_stride;
           d0_counter_d = d0_counter_q + 1;
         end
-        else if ((d1_counter_q < ctrl_i.d1_len) || (ctrl_i.dim_enable_1h[1] == 1'b1)) begin
+        else if ((d1_counter_q < ctrl_i.d1_len) || (ctrl_i.dim_enable_1h[1] == 1'b0)) begin
           d0_addr_d    = '0;
           d1_addr_d    = d1_addr_q + d1_stride;
           d0_counter_d = 1;
@@ -129,8 +129,8 @@ module hwpe_stream_addressgen_v3
       d1_addr_q         <= '0;
       d2_addr_q         <= '0;
       d0_counter_q      <= '0;
-      d1_counter_q      <= '0;
-      d2_counter_q      <= '0;
+      d1_counter_q      <= 1;
+      d2_counter_q      <= 1;
       overall_counter_q <= '0;
       addr_valid_q      <= '0;
     end
@@ -138,8 +138,8 @@ module hwpe_stream_addressgen_v3
       d1_addr_q         <= '0;
       d2_addr_q         <= '0;
       d0_counter_q      <= '0;
-      d1_counter_q      <= '0;
-      d2_counter_q      <= '0;
+      d1_counter_q      <= 1;
+      d2_counter_q      <= 1;
       overall_counter_q <= '0;
       addr_valid_q      <= '0;
     end
