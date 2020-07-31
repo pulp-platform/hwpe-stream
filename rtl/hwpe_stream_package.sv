@@ -111,6 +111,7 @@ package hwpe_stream_package;
   typedef struct packed {
     logic [$clog2(NB_SERDES_STREAMS_MAX)-1:0] first_stream;
     logic                                     clear_serdes_state;
+    logic [$clog2(NB_SERDES_STREAMS_MAX)-1:0] nb_contig_m1;
   } ctrl_serdes_t;
 
 endpackage
