@@ -68,7 +68,8 @@ endinterface // hwpe_stream_intf_tcdm
 interface hwpe_stream_intf_stream (
   input logic clk
 );
-  parameter int unsigned DATA_WIDTH = -1;
+  parameter int unsigned DATA_WIDTH = 32; // used to default to -1 and always overridden --> not well supported by some tools
+  parameter int unsigned STRB_WIDTH = DATA_WIDTH/8;
 `ifndef SYNTHESIS
   parameter bit BYPASS_VCR_ASSERT = 1'b0;
   parameter bit BYPASS_VDR_ASSERT = 1'b0;
@@ -77,7 +78,7 @@ interface hwpe_stream_intf_stream (
   logic                    valid;
   logic                    ready;
   logic [DATA_WIDTH-1:0]   data;
-  logic [DATA_WIDTH/8-1:0] strb;
+  logic [STRB_WIDTH-1:0]   strb;
 
   modport source (
     output valid, data, strb,

@@ -48,6 +48,7 @@ import hwpe_stream_package::*;
 
 module hwpe_stream_deserialize #(
   parameter int unsigned NB_OUT_STREAMS = 2,
+  parameter int unsigned CONTIG_LIMIT = 1024,
   parameter int unsigned DATA_WIDTH = 32
 )
 (
@@ -61,6 +62,8 @@ module hwpe_stream_deserialize #(
 );
 
   logic [$clog2(NB_OUT_STREAMS)-1:0] stream_cnt_d, stream_cnt_q;
+  logic [$clog2(CONTIG_LIMIT)-1:0]   contig_cnt_d, contig_cnt_q;
+logic stream_cnt_en;
   logic [NB_OUT_STREAMS-1:0]         pop_ready;
 
   // stream serialization
@@ -86,7 +89,7 @@ module hwpe_stream_deserialize #(
     else if(clear_i) begin
       stream_cnt_q <= '0;
     end
-    else if(push_i.valid & push_i.ready) begin
+    else if(stream_cnt_en) begin
       stream_cnt_q <= stream_cnt_d;
     end
   end
@@ -106,5 +109,32 @@ module hwpe_stream_deserialize #(
       end
     end
   end
+
+  // contiguous counters
+  always_ff @(posedge clk_i or negedge rst_ni)
+  begin : contig_counter_ff
+    if(~rst_ni) begin
+      contig_cnt_q <= '0;
+    end
+    else if(clear_i) begin
+      contig_cnt_q <= '0;
+    end
+    else if(push_i.valid & push_i.ready) begin
+      contig_cnt_q <= contig_cnt_d;
+    end
+  end
+
+  always_comb
+  begin : contig_counter_comb
+    contig_cnt_d = '0;
+    if(contig_cnt_q < ctrl_i.nb_contig_m1) begin
+      contig_cnt_d = contig_cnt_q + 1;
+    end
+    else begin
+      contig_cnt_d = '0;
+    end
+  end
+
+  assign stream_cnt_en = contig_cnt_q < ctrl_i.nb_contig_m1 ? 1'b0 : 1'b1;
 
 endmodule // hwpe_stream_deserialize
