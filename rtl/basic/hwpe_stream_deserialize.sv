@@ -135,6 +135,6 @@ logic stream_cnt_en;
     end
   end
 
-  assign stream_cnt_en = contig_cnt_q < ctrl_i.nb_contig_m1 ? 1'b0 : 1'b1;
+  assign stream_cnt_en = contig_cnt_q < ctrl_i.nb_contig_m1 ? 1'b0 : push_i.valid & push_i.ready;
 
 endmodule // hwpe_stream_deserialize
