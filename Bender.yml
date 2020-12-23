@@ -1,0 +1,49 @@
+package:
+  name: hwpe-stream
+  authors: 
+    - "Francesco Conti <f.conti@unibo.it>"
+    - "Gianna Paulin <pauling@iis.ee.ethz.ch>"
+
+dependencies:
+  tech_cells_generic: { git: "git@github.com:pulp-platform/tech_cells_generic.git", version: 0.1.6 }
+
+  sources:
+  - include_dirs:
+      - rtl
+    files:
+      - rtl/hwpe_stream_package.sv
+      - rtl/hwpe_stream_interfaces.sv
+      - rtl/basic/hwpe_stream_assign.sv
+      - rtl/basic/hwpe_stream_mux_static.sv
+      - rtl/basic/hwpe_stream_demux_static.sv
+      - rtl/basic/hwpe_stream_buffer.sv
+      - rtl/basic/hwpe_stream_merge.sv
+      - rtl/basic/hwpe_stream_fence.sv
+      - rtl/basic/hwpe_stream_split.sv
+      - rtl/basic/hwpe_stream_serialize.sv
+      - rtl/basic/hwpe_stream_deserialize.sv
+      - rtl/fifo/hwpe_stream_fifo_earlystall_sidech.sv
+      - rtl/fifo/hwpe_stream_fifo_earlystall.sv
+      - rtl/fifo/hwpe_stream_fifo_scm.sv
+      - rtl/fifo/hwpe_stream_fifo_scm_test_wrap.sv
+      - rtl/fifo/hwpe_stream_fifo_sidech.sv
+      - rtl/fifo/hwpe_stream_fifo.sv
+      - rtl/fifo/hwpe_stream_fifo_ctrl.sv
+      - rtl/streamer/hwpe_stream_addressgen.sv
+      - rtl/streamer/hwpe_stream_addressgen_v2.sv
+      - rtl/streamer/hwpe_stream_addressgen_v3.sv
+      - rtl/streamer/hwpe_stream_strbgen.sv
+      - rtl/streamer/hwpe_stream_sink.sv
+      - rtl/streamer/hwpe_stream_sink_realign.sv
+      - rtl/streamer/hwpe_stream_source.sv
+      - rtl/streamer/hwpe_stream_source_realign.sv
+      - rtl/streamer/hwpe_stream_streamer_queue.sv
+      - rtl/tcdm/hwpe_stream_tcdm_fifo_load.sv
+      - rtl/tcdm/hwpe_stream_tcdm_fifo_load_sidech.sv
+      - rtl/tcdm/hwpe_stream_tcdm_fifo_store.sv
+      - rtl/tcdm/hwpe_stream_tcdm_fifo.sv
+      - rtl/tcdm/hwpe_stream_tcdm_assign.sv
+      - rtl/tcdm/hwpe_stream_tcdm_mux.sv
+      - rtl/tcdm/hwpe_stream_tcdm_mux_static.sv
+      - rtl/tcdm/hwpe_stream_tcdm_reorder.sv
+      - rtl/tcdm/hwpe_stream_tcdm_reorder_static.sv
