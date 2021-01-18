@@ -7,7 +7,7 @@ package:
 dependencies:
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.1.6 }
 
-  sources:
+sources:
   - include_dirs:
       - rtl
     files:
