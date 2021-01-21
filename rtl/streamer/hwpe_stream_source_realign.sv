@@ -112,7 +112,7 @@ module hwpe_stream_source_realign #(
   logic int_last_packet;
 
   /* clock gating */
-  cluster_clock_gating i_realign_gating (
+  tc_clk_gating i_realign_gating (
     .clk_i     ( clk_i         ),
     .test_en_i ( test_mode_i   ),
     .en_i      ( ctrl_i.enable ),

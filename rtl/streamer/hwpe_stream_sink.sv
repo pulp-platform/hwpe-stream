@@ -169,7 +169,7 @@ module hwpe_stream_sink
 
   /* clock gating */
   assign clk_realign_en = flags_o.addressgen_flags.realign_flags.enable;
-  cluster_clock_gating i_realign_gating (
+  tc_clk_gating i_realign_gating (
     .clk_i     ( clk_i             ),
     .test_en_i ( test_mode_i       ),
     .en_i      ( clk_realign_en    ),

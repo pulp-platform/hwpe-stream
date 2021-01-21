@@ -61,7 +61,7 @@ module hwpe_stream_fifo_scm
     genvar x;
     genvar y;
 
-    cluster_clock_gating CG_WE_GLOBAL
+    tc_clk_gating CG_WE_GLOBAL
     (
         .clk_o(clk_int),
         .en_i(WriteEnable),
@@ -110,7 +110,7 @@ module hwpe_stream_fifo_scm
     generate
     for(x=0; x<NUM_WORDS; x++)
     begin : CG_CELL_WORD_ITER
-        cluster_clock_gating CG_Inst
+        tc_clk_gating CG_Inst
         (
             .clk_o(ClocksxC[x]),
             .en_i(WAddrOneHotxD[x]),
