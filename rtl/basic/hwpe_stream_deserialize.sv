@@ -63,7 +63,7 @@ module hwpe_stream_deserialize #(
 
   logic [$clog2(NB_OUT_STREAMS)-1:0] stream_cnt_d, stream_cnt_q;
   logic [$clog2(CONTIG_LIMIT)-1:0]   contig_cnt_d, contig_cnt_q;
-logic stream_cnt_en;
+  logic stream_cnt_en;
   logic [NB_OUT_STREAMS-1:0]         pop_ready;
 
   // stream serialization

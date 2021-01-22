@@ -37,7 +37,7 @@ module hwpe_stream_buffer #(
 
   logic clk_gated;
 
-  cluster_clock_gating i_cg (
+  tc_clk_gating i_cg (
     .clk_o     ( clk_gated             ),
     .en_i      ( pop_o.ready | clear_i ),
     .test_en_i ( test_mode_i           ),
