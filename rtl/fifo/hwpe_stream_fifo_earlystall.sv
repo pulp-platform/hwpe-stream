@@ -58,9 +58,10 @@
  *
  */
 
-import hwpe_stream_package::*;
 
-module hwpe_stream_fifo_earlystall #(
+module hwpe_stream_fifo_earlystall
+  import hwpe_stream_package::*;
+#(
   parameter int unsigned DATA_WIDTH = 32,
   parameter int unsigned FIFO_DEPTH = 8,
   parameter int unsigned LATCH_FIFO = 0

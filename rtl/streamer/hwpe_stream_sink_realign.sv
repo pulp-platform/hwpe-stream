@@ -53,9 +53,10 @@
  *
  */
 
-import hwpe_stream_package::*;
 
-module hwpe_stream_sink_realign #(
+module hwpe_stream_sink_realign
+  import hwpe_stream_package::*;
+#(
   parameter int unsigned DATA_WIDTH = 32
 )
 (

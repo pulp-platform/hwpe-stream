@@ -38,9 +38,10 @@
  *   +------------------+-------------+---------------------------------------------+
  */
 
-import hwpe_stream_package::*;
 
-module hwpe_stream_fence #(
+module hwpe_stream_fence
+  import hwpe_stream_package::*;
+#(
   parameter int unsigned NB_STREAMS = 2,
   parameter int unsigned DATA_WIDTH = 32
 )

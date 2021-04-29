@@ -44,9 +44,9 @@
  *
  */
 
-import hwpe_stream_package::*;
 
 module hwpe_stream_tcdm_mux
+  import hwpe_stream_package::*;
 #(
   parameter int unsigned NB_IN_CHAN  = 2,
   parameter int unsigned NB_OUT_CHAN = 1,

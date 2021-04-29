@@ -34,9 +34,10 @@
  *   +--------------+--------------+------------------------------------------+
  */
 
-import hwpe_stream_package::*;
 
-module hwpe_stream_fifo_ctrl #(
+module hwpe_stream_fifo_ctrl
+  import hwpe_stream_package::*;
+#(
   parameter int unsigned FIFO_DEPTH = 8
 )
 (

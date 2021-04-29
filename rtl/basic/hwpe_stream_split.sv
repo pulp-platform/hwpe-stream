@@ -44,9 +44,10 @@
  *   +------------------+-------------+---------------------------------------------+
  */
 
-import hwpe_stream_package::*;
 
-module hwpe_stream_split #(
+module hwpe_stream_split
+  import hwpe_stream_package::*;
+#(
   parameter int unsigned NB_OUT_STREAMS = 2,
   parameter int unsigned DATA_WIDTH_IN = 128
 )

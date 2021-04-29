@@ -18,9 +18,9 @@
  * `push_i` to an output stream `pop_o`.
  */
 
-import hwpe_stream_package::*;
 
 module hwpe_stream_assign
+  import hwpe_stream_package::*;
 (
   hwpe_stream_intf_stream.sink   push_i,
   hwpe_stream_intf_stream.source pop_o

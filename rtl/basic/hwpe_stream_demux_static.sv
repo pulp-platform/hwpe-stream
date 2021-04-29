@@ -39,9 +39,9 @@
  *   +------------------+-------------+---------------------------------------+
  */
 
-import hwpe_stream_package::*;
 
 module hwpe_stream_demux_static
+  import hwpe_stream_package::*;
 #(
   parameter int unsigned NB_OUT_STREAMS = 2
 )

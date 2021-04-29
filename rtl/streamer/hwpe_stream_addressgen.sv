@@ -133,9 +133,9 @@
  *
  */
 
-import hwpe_stream_package::*;
 
 module hwpe_stream_addressgen
+  import hwpe_stream_package::*;
 #(
   parameter int unsigned REALIGN_TYPE = HWPE_STREAM_REALIGN_SOURCE,
   parameter int unsigned DECOUPLED    = 0,

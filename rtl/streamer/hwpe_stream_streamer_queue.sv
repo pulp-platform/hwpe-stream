@@ -13,9 +13,9 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import hwpe_stream_package::*;
 
 module hwpe_stream_streamer_queue
+  import hwpe_stream_package::*;
 (
   input logic clk_i,
   input logic rst_ni,

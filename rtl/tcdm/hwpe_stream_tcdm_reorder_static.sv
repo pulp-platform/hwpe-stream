@@ -30,9 +30,9 @@
  *   +------------+-------------+------------------------------+
  */
 
-import hwpe_stream_package::*;
 
 module hwpe_stream_tcdm_reorder_static
+  import hwpe_stream_package::*;
 #(
   parameter int unsigned NB_CHAN = 2
 )

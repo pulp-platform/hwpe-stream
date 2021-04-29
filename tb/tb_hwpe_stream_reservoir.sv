@@ -19,9 +19,9 @@
 timeunit 1ns;
 timeprecision 1ps;
 
-import hwpe_stream_package::*;
 
 module tb_hwpe_stream_reservoir
+  import hwpe_stream_package::*;
 #(
   parameter DATA_WIDTH      = -1,
   parameter REALIGN_TYPE   = HWPE_STREAM_REALIGN_SOURCE,

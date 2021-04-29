@@ -20,9 +20,10 @@
  * .. combinational paths.
  */
 
-import hwpe_stream_package::*;
 
-module hwpe_stream_buffer #(
+module hwpe_stream_buffer
+  import hwpe_stream_package::*;
+#(
   parameter int unsigned DATA_WIDTH = 32
 )
 (
