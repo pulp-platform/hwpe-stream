@@ -67,9 +67,10 @@
  *
  */
 
-import hwpe_stream_package::*;
 
-module hwpe_stream_source_realign #(
+module hwpe_stream_source_realign
+  import hwpe_stream_package::*;
+#(
   parameter int unsigned DECOUPLED  = 0, // set to 1 if used with a TCDM stream that does not respect the zero-latency assumption,
                                          // e.g. it passes through a TCDM load FIFO.
   parameter int unsigned DATA_WIDTH = 32,

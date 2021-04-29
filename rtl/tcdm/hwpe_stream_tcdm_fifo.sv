@@ -83,9 +83,10 @@
  *
  */
 
-import hwpe_stream_package::*;
 
-module hwpe_stream_tcdm_fifo #(
+module hwpe_stream_tcdm_fifo
+  import hwpe_stream_package::*;
+#(
   parameter int unsigned FIFO_DEPTH = 8,
   parameter int unsigned LATCH_FIFO = 0
 )

@@ -59,9 +59,9 @@
  *
  */
 
-import hwpe_stream_package::*;
 
 module hwpe_stream_strbgen
+  import hwpe_stream_package::*;
 #(
   parameter int unsigned DATA_WIDTH = 32
 )

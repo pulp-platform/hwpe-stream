@@ -28,9 +28,9 @@
  *   :caption: Example of **hwpe_stream_mux_static** operation.
  */
 
-import hwpe_stream_package::*;
 
 module hwpe_stream_mux_static
+  import hwpe_stream_package::*;
 (
   input  logic                   clk_i,
   input  logic                   rst_ni,

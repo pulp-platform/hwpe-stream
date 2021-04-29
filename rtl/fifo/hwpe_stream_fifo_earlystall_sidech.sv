@@ -14,9 +14,10 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import hwpe_stream_package::*;
 
-module hwpe_stream_fifo_earlystall_sidech #(
+module hwpe_stream_fifo_earlystall_sidech
+  import hwpe_stream_package::*;
+#(
   parameter int unsigned DATA_WIDTH = 32,
   parameter int unsigned FIFO_DEPTH = 8,
   parameter int unsigned LATCH_FIFO = 0,

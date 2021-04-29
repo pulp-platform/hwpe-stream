@@ -13,9 +13,9 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import hwpe_stream_package::*;
 
 module hwpe_stream_tcdm_assign
+  import hwpe_stream_package::*;
 (
   hwpe_stream_intf_tcdm.slave  tcdm_slave,
   hwpe_stream_intf_tcdm.master tcdm_master

@@ -44,9 +44,10 @@
  *   +------------------+-------------+---------------------------------------------+
  */
 
-import hwpe_stream_package::*;
 
-module hwpe_stream_merge #(
+module hwpe_stream_merge
+  import hwpe_stream_package::*;
+#(
   parameter int unsigned NB_IN_STREAMS = 2,
   parameter int unsigned DATA_WIDTH_IN = 32
 )

@@ -18,9 +18,9 @@
 timeunit 1ns;
 timeprecision 1ps;
 
-import hwpe_stream_package::*;
 
 module tb_hwpe_stream_sink_realign;
+  import hwpe_stream_package::*;
 
   // parameters
   parameter PROB_STALL = 0.2;

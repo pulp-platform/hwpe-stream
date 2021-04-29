@@ -14,9 +14,9 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import hwpe_stream_package::*;
 
 module hwpe_stream_fifo_scm_test_wrap
+  import hwpe_stream_package::*;
 #(
     parameter ADDR_WIDTH = 5,
     parameter DATA_WIDTH = 32

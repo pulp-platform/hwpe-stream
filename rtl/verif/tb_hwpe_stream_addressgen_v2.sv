@@ -11,9 +11,9 @@
 timeunit 1ps;
 timeprecision 1ps;
 
-import hwpe_stream_package::*;
 
 module tb_hwpe_stream_addressgen_v2;
+  import hwpe_stream_package::*;
 
   parameter int unsigned TRANS_CNT    = 16;
   parameter int unsigned CNT          = 10;

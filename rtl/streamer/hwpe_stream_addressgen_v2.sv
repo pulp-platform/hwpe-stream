@@ -13,9 +13,9 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import hwpe_stream_package::*;
 
 module hwpe_stream_addressgen_v2
+  import hwpe_stream_package::*;
 #(
   parameter int unsigned TRANS_CNT    = 16,
   parameter int unsigned CNT          = 10 // number of bits used within the internal counter

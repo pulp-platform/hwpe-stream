@@ -90,9 +90,9 @@
  *
  */
 
-import hwpe_stream_package::*;
 
 module hwpe_stream_source
+  import hwpe_stream_package::*;
 #(
   // Stream interface params
   parameter int unsigned DATA_WIDTH    = 32,

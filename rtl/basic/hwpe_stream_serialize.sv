@@ -44,9 +44,10 @@
  *
  */
 
-import hwpe_stream_package::*;
 
-module hwpe_stream_serialize #(
+module hwpe_stream_serialize
+  import hwpe_stream_package::*;
+#(
   parameter int unsigned NB_IN_STREAMS = 2,
   parameter int unsigned CONTIG_LIMIT = 1024,
   parameter int unsigned DATA_WIDTH = 32
