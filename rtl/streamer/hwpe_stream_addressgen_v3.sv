@@ -13,6 +13,121 @@
  * specific language governing permissions and limitations under the License.
  */
 
+/**
+ * The **hwpe_stream_addressgen_v3** module is used to generate addresses to
+ * load or store HWPE-Stream stream. In this version of the address generator,
+ * the address is itself carried within a HWPE-Stream, making it easily stallable.
+ * The address generator can be used to generate address from a
+ * three-dimensional space, which can be visited with configurable strides in all
+ * three dimensions.
+ *
+ * The multiple loop functionality is partially overlapped by the functionality
+ * provided by the microcode processor `hwce_ctrl_ucode` that can be embedded
+ * in HWPEs. The latter is much more flexible and smaller, but less fast.
+ *
+ * One iteration is performed per each cycle when `enable_i` is 1 and the output
+ * `addr_o` stream is ready. `presample_i` should be 1 in the first cycle in which
+ * the address generator can start generating addresses, and no further.
+ * The following piece of pseudo-C code resumes the basic functionality provided by
+ * the address generator.
+ *
+ * .. code-block:: C
+ *
+ *   hwpe_stream_addressgen_v3(
+ *     int base_addr,                                          // base address (byte-aligned)
+ *     int d0_len,    int d1_len,    int tot_len               // d0,d1,total length (in number of transactions)
+ *     int d0_stride, int d1_stride, int d2_stride,            // d0,d1,d2 strides (in bytes)
+ *     int *d0_addr,  int *d1_addr,  int *d2_addr,             // d0,d1,d2 addresses (by reference)
+ *     int *d0_cnt,   int *d1_cnt,   int *ov_cnt               // d0,d1,overall counters (by reference)
+ *   ) {
+ *     // compute current address
+ *     int current_addr = 0;
+ *     int done = 0;
+ *     if (dim_enable & 0x1 == 0) { // 1-dimensional streaming
+ *       current_addr = base_addr + *d0_addr;
+ *     }
+ *     else if(dim_enable & 0x2 == 0) { // 2-dimensional streaming
+ *       current_addr = base_addr + *d1_addr + *d0_addr;
+ *     }
+ *     else { // 3-dimensional streaming
+ *       current_addr = base_addr + *d2_addr + *d1_addr + *d0_addr;
+ *     }
+ *     // update counters and dimensional addresses
+ *     if(*ov_cnt == tot_len) {
+ *       done = 1;
+ *     }
+ *     if((*d0_cnt < d0_len) || (dim_enable & 0x1 == 0)) {
+ *       *d0_addr = *d0_addr + d0_stride;
+ *       *d0_cnt  = *d0_cnt + 1;
+ *     }
+ *     else if ((*d1_cnt < d1_len) || (dim_enable & 0x2 == 0)) {
+ *       *d0_addr = 0;
+ *       *d1_addr = *d1_addr + d1_stride;
+ *       *d0_cnt  = 1;
+ *       *d1_cnt  = *d1_cnt + 1;
+ *     }
+ *     else {
+ *       *d0_addr = 0;
+ *       *d1_addr = 0;
+ *       *d2_addr = *d2_addr + d2_stride;
+ *       *d0_cnt  = 1;
+ *       *d1_cnt  = 1;
+ *     }
+ *     *ov_cnt = *ov_cnt + 1;
+ *     return current_addr, done;
+ *   }
+ *
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_addressgen_v3_params:
+ * .. table:: **hwpe_stream_addressgen_v3** design-time parameters.
+ *
+ *   +-------------------------+------------------------------------+---------------------------------------------------------------------------------------------+
+ *   | **Name**                | **Default**                        | **Description**                                                                             |
+ *   +-------------------------+------------------------------------+---------------------------------------------------------------------------------------------+
+ *   | *TRANS_CNT*             | 32                                 | Number of bits supported in the transaction counter, which will overflow at 2^ `TRANS_CNT`. |
+ *   +-------------------------+------------------------------------+---------------------------------------------------------------------------------------------+
+ *   | *CNT*                   | 32                                 | Number of bits supported in non-transaction counters, which will overflow at 2^ `CNT`.      |
+ *   +-------------------------+------------------------------------+---------------------------------------------------------------------------------------------+
+ *
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_addressgen_v3_ctrl:
+ * .. table:: **hwpe_stream_addressgen_v3** input control signals.
+ *
+ *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+ *   | **Name**                         | **Type**             | **Description**                                                                                             |
+ *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+ *   | *base_addr*                      | `logic[31:0]`        | Byte-aligned base address of the stream in the HWPE-accessible memory.                                      |
+ *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+ *   | *tot_len*                        | `logic[31:0]`        | Total number of transactions in stream; only the `TRANS_CNT` LSB are actually used.                         |
+ *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+ *   | *d0_len*                         | `logic[31:0]`        | d0 length in number of transactions                                                                         |
+ *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+ *   | *d0_stride*                      | `logic[31:0]`        | d0 stride in bytes                                                                                          |
+ *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+ *   | *d0_len*                         | `logic[31:0]`        | d0 length in number of transactions                                                                         |
+ *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+ *   | *d1_stride*                      | `logic[31:0]`        | d1 stride in bytes                                                                                          |
+ *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+ *   | *d1_len*                         | `logic[31:0]`        | d1 length in number of transactions                                                                         |
+ *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+ *   | *d2_stride*                      | `logic[31:0]`        | d2 stride in bytes                                                                                          |
+ *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+ *   | *dim_enable_1h*                  | `logic[1:0]`         | One-hot switch to enable 3-d counting (11), 2-d (01), or 1-d (00).                                          |
+ *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+ *
+ * .. tabularcolumns:: |l|l|J|
+ * .. _hwpe_stream_addressgen_v3_flags:
+ * .. table:: **hwpe_stream_addressgen_v3** output flags.
+ *
+ *   +-----------------+------------------+-----------------------------------------------+
+ *   | **Name**        | **Type**         | **Description**                               |
+ *   +-----------------+------------------+-----------------------------------------------+
+ *   | *done*          | `logic`          | 1 when the address generation has finished.   |
+ *   +-----------------+------------------+-----------------------------------------------+
+ *
+ */
+
+
 import hwpe_stream_package::*;
 
 module hwpe_stream_addressgen_v3

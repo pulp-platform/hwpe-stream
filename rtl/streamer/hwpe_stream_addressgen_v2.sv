@@ -13,6 +13,11 @@
  * specific language governing permissions and limitations under the License.
  */
 
+/**
+ * _**hwpe_stream_addressgen_v2** is DEPRECATED. New designs should use
+ * **hwpe_stream_addressgen_v3** instead._
+ */
+
 import hwpe_stream_package::*;
 
 module hwpe_stream_addressgen_v2

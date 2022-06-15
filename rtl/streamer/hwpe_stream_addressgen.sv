@@ -14,6 +14,9 @@
  */
 
 /**
+ * _**hwpe_stream_addressgen** is DEPRECATED. New designs should use
+ * **hwpe_stream_addressgen_v3** instead._
+ *
  * The **hwpe_stream_addressgen** module is used to generate addresses to
  * load or store HWPE-Stream streams, as well as the related byte enable
  * strobes (`gen_addr_o` and `gen_strb_o` respectively).

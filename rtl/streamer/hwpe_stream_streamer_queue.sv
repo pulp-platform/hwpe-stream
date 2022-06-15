@@ -16,6 +16,9 @@
 import hwpe_stream_package::*;
 
 module hwpe_stream_streamer_queue
+#(
+  parameter int unsigned FIFO_DEPTH = 2
+)
 (
   input logic clk_i,
   input logic rst_ni,
@@ -24,40 +27,79 @@ module hwpe_stream_streamer_queue
 
   // controller side
   input  ctrl_sourcesink_t   controller_ctrl_i,
+  input  logic               controller_ctrl_valid_i,
+  output logic               controller_ctrl_ready_o,
   output flags_sourcesink_t  controller_flags_o,
+  output logic               controller_flags_valid_o,
+  input  logic               controller_flags_ready_i,
 
   // streamer side
   output ctrl_sourcesink_t   streamer_ctrl_o,
-  input  flags_sourcesink_t  streamer_flags_i
+  output logic               streamer_ctrl_valid_o,
+  input  logic               streamer_ctrl_ready_i,
+  input  flags_sourcesink_t  streamer_flags_i,
+  input  logic               streamer_flags_valid_i,
+  output logic               streamer_flags_ready_o
 );
 
-  logic [31:0] base_addr, base_addr_q;
-  logic [31:0] trans_size, trans_size_q;
+  hwpe_stream_intf_stream #(
+    .DATA_WIDTH ( $bits(ctrl_sourcesink_t) )
+  ) ctrl_push (
+    .clk ( clk_i )
+  );
 
-  always_ff @(posedge clk_i or negedge rst_ni)
-  begin
-    if(~rst_ni) begin
-      base_addr_q  <= '0;
-      trans_size_q <= '0;
-    end
-    else if(clear_i) begin
-      base_addr_q  <= '0;
-      trans_size_q <= '0;
-    end
-    else if(controller_ctrl_i.req_start) begin
-      base_addr_q  <= controller_ctrl_i.addressgen_ctrl.base_addr;
-      trans_size_q <= controller_ctrl_i.addressgen_ctrl.trans_size;
-    end
-  end
+  hwpe_stream_intf_stream #(
+    .DATA_WIDTH ( $bits(ctrl_sourcesink_t) )
+  ) ctrl_pop (
+    .clk ( clk_i )
+  );
 
-  always_comb
-  begin
-    streamer_ctrl_o = controller_ctrl_i;
-    streamer_ctrl_o.addressgen_ctrl.base_addr   = controller_ctrl_i.req_start ? controller_ctrl_i.addressgen_ctrl.base_addr   : base_addr_q;
-    streamer_ctrl_o.addressgen_ctrl.trans_size  = controller_ctrl_i.req_start ? controller_ctrl_i.addressgen_ctrl.trans_size  : trans_size_q;
-    streamer_ctrl_o.addressgen_ctrl.line_length = controller_ctrl_i.req_start ? controller_ctrl_i.addressgen_ctrl.line_length : trans_size_q[15:0];
-  end
+  hwpe_stream_intf_stream #(
+    .DATA_WIDTH ( $bits(flags_sourcesink_t) )
+  ) flags_push (
+    .clk ( clk_i )
+  );
 
-  assign controller_flags_o = streamer_flags_i;
+  hwpe_stream_intf_stream #(
+    .DATA_WIDTH ( $bits(flags_sourcesink_t) )
+  ) flags_pop (
+    .clk ( clk_i )
+  );
+
+  hwpe_stream_fifo #(
+    .DATA_WIDTH ( $bits(ctrl_sourcesink_t) ),
+    .FIFO_DEPTH ( FIFO_DEPTH               )
+  ) i_ctrl_fifo (
+    .clk_i   ( clk_i     ),
+    .rst_ni  ( rst_ni    ),
+    .clear_i ( clear_i   ),
+    .flags_o (           ),
+    .push_i  ( ctrl_push ),
+    .pop_o   ( ctrl_pop  )
+  );
+  assign ctrl_push.valid = controller_ctrl_valid_i;
+  assign ctrl_push.data  = controller_ctrl_i;
+  assign ctrl_push.strb  = '1;
+  assign streamer_ctrl_valid_o = ctrl_pop.valid;
+  assign streamer_ctrl_o  = ctrl_pop.data;
+  assign ctrl_pop.ready = streamer_ctrl_ready_i;
+
+  hwpe_stream_fifo #(
+    .DATA_WIDTH ( $bits(flags_sourcesink_t) ),
+    .FIFO_DEPTH ( FIFO_DEPTH                )
+  ) i_flags_fifo (
+    .clk_i   ( clk_i      ),
+    .rst_ni  ( rst_ni     ),
+    .clear_i ( clear_i    ),
+    .flags_o (            ),
+    .push_i  ( flags_push ),
+    .pop_o   ( flags_pop  )
+  );
+  assign flags_push.valid = streamer_flags_valid_i;
+  assign flags_push.data  = streamer_flags_i;
+  assign flags_push.strb  = '1;
+  assign controller_flags_valid_o = flags_pop.valid;
+  assign controller_flags_o       = flags_pop.data;
+  assign flags_pop.ready = controller_flags_ready_i;
 
 endmodule // hwpe_stream_streamer_queue
