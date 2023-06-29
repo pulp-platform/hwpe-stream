@@ -1,8 +1,8 @@
 /*
- * tb_hwpe_stream_receiver.sv
- * Francesco Conti <fconti@iis.ee.ethz.ch>
+ * hwpe_stream_traffic_recv.sv
+ * Francesco Conti <f.conti@unibo.it>
  *
- * Copyright (C) 2014-2018 ETH Zurich, University of Bologna
+ * Copyright (C) 2014-2023 ETH Zurich, University of Bologna
  * Copyright and related rights are licensed under the Solderpad Hardware
  * License, Version 0.51 (the "License"); you may not use this file except in
  * compliance with the License.  You may obtain a copy of the License at
@@ -12,8 +12,7 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  *
- * The tb_hwpe_stream_reservoir module models a reservoir
- * of random
+ * The hwpe_stream_traffic_recv receives and optionally checks traffic.
  */
 
 timeunit 1ns;
@@ -31,31 +30,28 @@ module tb_hwpe_stream_receiver
   input  logic                 clk_i,
   input  logic                 force_ready_i,
   input  logic                 enable_i,
-  hwpe_stream_intf_stream.sink data_i
+  hwpe_stream_intf_stream.sink push
 );
 
-  logic data_ready;
+  logic push_ready;
 
   always_ff @(posedge clk_i)
   begin
     if (force_ready_i)
-      data_ready <= 1'b1;
+      push_ready <= 1'b1;
     else if(enable_i) begin
-      if ((data_i.valid == 1'b1) || (data_i.ready == 1'b0)) begin
+      if ((push.valid == 1'b1) || (push.ready == 1'b0)) begin
         if ($urandom_range(0, 1000) < PROB_STALL*1000)
-          data_i.ready <= 1'b0;
+          push.ready <= 1'b0;
         else
-          data_i.ready <= 1'b1;
+          push.ready <= 1'b1;
       end
     end
     else begin
-      data_ready <= 1'b0;
+      push_ready <= 1'b0;
     end
   end
 
-  always @(data_ready)
-  begin
-    data_i.ready = data_ready;
-  end
+  assign push.ready = push_ready;
 
 endmodule // tb_hwpe_stream_reservoir
