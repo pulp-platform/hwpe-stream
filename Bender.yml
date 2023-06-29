@@ -56,3 +56,9 @@ sources:
       - rtl/tcdm/hwpe_stream_tcdm_fifo_store.sv
       # Level 5
       - rtl/streamer/hwpe_stream_sink.sv
+      - target: fifo_test
+        files:
+          - tb/hwpe_stream_traffic_gen.sv
+          - tb/hwpe_stream_traffic_recv.sv
+          - tb/tb_template.sv
+
