@@ -1,6 +1,6 @@
 package:
   name: hwpe-stream
-  authors: 
+  authors:
     - "Francesco Conti <f.conti@unibo.it>"
     - "Gianna Paulin <pauling@iis.ee.ethz.ch>"
 
@@ -58,7 +58,7 @@ sources:
       - rtl/streamer/hwpe_stream_sink.sv
       - target: fifo_test
         files:
-          - tb/hwpe_stream_traffic_gen.sv
-          - tb/hwpe_stream_traffic_recv.sv
-          - tb/tb_template.sv
+          - rtl/verif/hwpe_stream_traffic_gen.sv
+          - rtl/verif/hwpe_stream_traffic_recv.sv
+          - rtl/verif/tb_fifo.sv
 

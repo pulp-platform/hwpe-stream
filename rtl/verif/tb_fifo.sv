@@ -1,5 +1,5 @@
 /*
- * tb_template.sv
+ * tb.sv
  * Francesco Conti <f.conti@unibo.it>
  *
  * Copyright (C) 2018-2023 ETH Zurich, University of Bologna
@@ -16,7 +16,7 @@
 timeunit 1ps;
 timeprecision 1ps;
 
-module tb_template;
+module tb;
 
   // parameters
   parameter PROB_STALL_GEN  = 0.1;
@@ -182,5 +182,5 @@ module tb_template;
 
   end
 
-endmodule // tb_template
+endmodule // tb
 

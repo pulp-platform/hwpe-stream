@@ -1,0 +1,10 @@
+.bender/*
+.bender
+Bender.lock
+sim/bender
+sim/build/*
+sim/build
+sim/compile.tcl
+sim/modelsim.ini
+sim/vsim.wlf
+
