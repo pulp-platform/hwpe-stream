@@ -2,17 +2,19 @@
 
 If you are using these IPs for an academic publication, please cite the following paper:
 ```
-@article{conti2018xne, 
-  author={F. {Conti} and P. D. {Schiavone} and L. {Benini}}, 
-  journal={IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems}, 
-  title={XNOR Neural Engine: A Hardware Accelerator IP for 21.6-fJ/op Binary Neural Network Inference}, 
-  year={2018}, 
-  doi={10.1109/TCAD.2018.2857019}, 
-  ISSN={0278-0070}, 
+@article{conti2018xne,
+  author={F. {Conti} and P. D. {Schiavone} and L. {Benini}},
+  journal={IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems},
+  title={XNOR Neural Engine: A Hardware Accelerator IP for 21.6-fJ/op Binary Neural Network Inference},
+  year={2018},
+  doi={10.1109/TCAD.2018.2857019},
+  ISSN={0278-0070},
 }
 ```
 
 See documentation on https://hwpe-doc.readthedocs.io/en/latest/.
+
+# Repository content
 
 The `hwpe-stream` repository contains the definition of the HWPE-Stream and TCDM interfaces used with HWPEs (HW Processing Engines), as well as the IPs necessary to manage the streams and construct streamers, e.g. for the XNE, HWCE, etc.
 This repository contains the following IPs:
@@ -50,3 +52,23 @@ This repository contains the following IPs:
  - *strbgen*: generates strobes for non-aligned lines
  - *sink\_realign*: HWPE-Stream realigner for non-aligned TCDM store streams
  - *source\_realign*: HWPE-Stream realigner for non-aligned TCDM load streams
+
+# Testbench
+The repository contains at the moment only a skeleton infrastructure for verification, with a simple FIFO test (`rtl/verif/tb_fifo.sv`).
+To fetch the required IPs using Bender and generate build scripts:
+```
+make update-ips
+```
+To build the simulation infrastructure:
+```
+make hw-all
+```
+To perform a test with QuestaSim:
+```
+make run
+```
+The `gui` option enables the QuestaSim GUI, while `P_STALL_GEN` and `P_STALL_RECV` control the stall probability of the traffic generators and receivers (from `0.0` to `0.99`).
+E.g., to perform a test with 80% receiver stall probability, 15% generator stall probability and GUI, the command is:
+```
+make run gui=1 P_STALL_GEN=0.15 P_STALL_RECV=0.8
+```
