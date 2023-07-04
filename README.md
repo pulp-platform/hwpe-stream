@@ -1,5 +1,14 @@
 [![Documentation Status](https://readthedocs.org/projects/hwpe-doc/badge/?version=latest)](https://hwpe-doc.readthedocs.io/en/latest/?badge=latest)
 
+# HWPE Stream 
+
+## Installation Requirements
+``` bash
+pip install -r requirements.txt
+```
+
+## Citation
+
 If you are using these IPs for an academic publication, please cite the following paper:
 ```
 @article{conti2018xne, 
