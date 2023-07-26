@@ -22,13 +22,24 @@
  * .. _hwpe_stream_serialize_params:
  * .. table:: **hwpe_stream_serialize** design-time parameters.
  *
- *   +------------------+-------------+---------------------------------------------+
- *   | **Name**         | **Default** | **Description**                             |
- *   +------------------+-------------+---------------------------------------------+
- *   | *NB_IN_STREAMS*  | 2           | Number of input HWPE-Stream streams.        |
- *   +------------------+-------------+---------------------------------------------+
- *   | *DATA_WIDTH*     | 32          | Width of the HWPE-Stream streams.           |
- *   +------------------+-------------+---------------------------------------------+
+ *   +------------------+-------------+-------------------------------------------------------+
+ *   | **Name**         | **Default** | **Description**                                       |
+ *   +------------------+-------------+-------------------------------------------------------+
+ *   | *NB_IN_STREAMS*  | 2           | Number of input HWPE-Stream streams.                  |
+ *   +------------------+-------------+-------------------------------------------------------+
+ *   | *DATA_WIDTH*     | 32          | Width of the HWPE-Stream streams.                     |
+ *   +------------------+-------------+-------------------------------------------------------+
+ *   | *CONTIG_LIMIT*   | 1024        | Maximum number of contiguous packets per stream.      |
+ *   +------------------+-------------+-------------------------------------------------------+
+ *   | *SYNC_READY*     | 0           | If 0, each incoming stream is handshaken separately,  |
+ *   |                  |             | which means that their producers must be independent. |
+ *   |                  |             | If 1, the ready signal is "fenced", which means that  |
+ *   |                  |             | all streams wait for the last stream to be ready to   |
+ *   |                  |             | progress. This is useful, for example, when there is  |
+ *   |                  |             | a single producer (e.g., `hwpe_stream_split`). Care   |
+ *   |                  |             | must be taken to deadlocks, typically by inserting a  |
+ *   |                  |             | decoupling FIFO.                                      |
+ *   +------------------+-------------+-------------------------------------------------------+
  *
   * .. tabularcolumns:: |l|l|J|
  * .. _hwpe_stream_serialize_ctrl:
@@ -49,7 +60,8 @@ import hwpe_stream_package::*;
 module hwpe_stream_serialize #(
   parameter int unsigned NB_IN_STREAMS = 2,
   parameter int unsigned CONTIG_LIMIT = 1024,
-  parameter int unsigned DATA_WIDTH = 32
+  parameter int unsigned DATA_WIDTH = 32,
+  parameter logic        SYNC_READY = 1'b0
 )
 (
   input  logic                   clk_i,
@@ -87,10 +99,17 @@ module hwpe_stream_serialize #(
   assign pop_o.valid = push_valid[stream_cnt_q];
   assign pop_o.strb  = push_strb [stream_cnt_q];
 
-  always_comb
-  begin
-    push_ready = '0;
-    push_ready[stream_cnt_q] = pop_o.ready;
+  if(SYNC_READY) begin : sync_ready_gen
+    for(genvar ii=0; ii<NB_IN_STREAMS; ii++) begin : sync_ready_loop_gen
+      assign push_ready[ii] = (stream_cnt_q == NB_IN_STREAMS-1) ? stream_cnt_en & pop_o.ready : 1'b0;
+    end
+  end
+  else begin : no_sync_ready_gen
+    always_comb
+    begin
+      push_ready = '0;
+      push_ready[stream_cnt_q] = pop_o.ready;
+    end
   end
 
   // stream counters
