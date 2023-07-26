@@ -19,6 +19,11 @@ package hwpe_stream_package;
   parameter int unsigned HWPE_STREAM_REALIGN_SOURCE = 0;
   parameter int unsigned HWPE_STREAM_REALIGN_SINK   = 1;
 
+  // addressgen_v3 enables
+  parameter logic [1:0] HWPE_STREAM_ADDRESSGEN_3D = 2'b11;
+  parameter logic [1:0] HWPE_STREAM_ADDRESSGEN_2D = 2'b01;
+  parameter logic [1:0] HWPE_STREAM_ADDRESSGEN_1D = 2'b00;
+
   // addressgen related types
   typedef struct packed {
     logic [31:0] base_addr;
