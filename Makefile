@@ -84,7 +84,7 @@ update-ips: $(BENDER)
 	$(BENDER) script vsim        \
 	--vlog-arg="$(compile_flag)" \
 	--vcom-arg="-pedanticerrors" \
-	-t rtl -t fifo_test          \
+	-t rtl -t test               \
 	> sim/${compile_script}
 
 build-hw: hw-all
