@@ -139,7 +139,6 @@ module hwpe_stream_addressgen_v3
   // global signals
   input  logic                   clk_i,
   input  logic                   rst_ni,
-  input  logic                   test_mode_i,
   // local enable and clear
   input  logic                   enable_i,
   input  logic                   clear_i,
