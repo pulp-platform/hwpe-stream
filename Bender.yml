@@ -50,6 +50,7 @@ sources:
       - rtl/fifo/hwpe_stream_fifo.sv
       - rtl/tcdm/hwpe_stream_tcdm_fifo_load_sidech.sv
       # Level 4
+      - rtl/fifo/hwpe_stream_fifo_passthrough.sv
       - rtl/streamer/hwpe_stream_source.sv
       - rtl/tcdm/hwpe_stream_tcdm_fifo.sv
       - rtl/tcdm/hwpe_stream_tcdm_fifo_load.sv
