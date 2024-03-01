@@ -24,6 +24,10 @@
  * interface when it is completely full, and will lower its `valid`
  * signal on the output stream `pop_o` interface when it is completely
  * empty.
+ * The regular FIFO does not allow for transactions to fall through the FIFO
+ * queue if there are no stalls, therefore any transaction always
+ * "pays" at least 1 cycle latency through the FIFO.
+ * The alternative is the passthrough FIFO **hwpe_stream_fifo_passthrough**.
  *
  * .. tabularcolumns:: |l|l|J|
  * .. _hwpe_stream_fifo_params:
