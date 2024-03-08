@@ -90,8 +90,8 @@ package hwpe_stream_package;
   typedef struct packed {
     logic empty;
     logic full;
-    logic [7:0] push_pointer;
-    logic [7:0] pop_pointer;
+    logic almost_empty;
+    logic almost_full;
   } flags_fifo_t;
 
   // source/sink related types
