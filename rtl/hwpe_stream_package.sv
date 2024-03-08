@@ -92,6 +92,8 @@ package hwpe_stream_package;
     logic full;
     logic almost_empty;
     logic almost_full;
+    logic [7:0] push_pointer;
+    logic [7:0] pop_pointer;
   } flags_fifo_t;
 
   // source/sink related types
