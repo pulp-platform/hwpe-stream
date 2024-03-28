@@ -44,23 +44,13 @@ hwpe-stream:
     rtl/tcdm/hwpe_stream_tcdm_reorder_static.sv,
   ]
 
-tb_hwpe_stream:
-  flags: [
-    skip_synthesis,
-  ]
-  files: [
-    tb/tb_hwpe_stream_reservoir.sv,
-    tb/tb_hwpe_stream_receiver.sv,
-  ]
-
-tb_hwpe_stream_local:
+verif_hwpe_stream:
   flags: [
     only_local,
     skip_synthesis,
   ]
   files: [
-    tb/tb_hwpe_stream_sink_realign.sv,
-    tb/tb_hwpe_stream_source_realign.sv,
-    tb/tb_hwpe_stream_source_realign_decoupled.sv,
+    rtl/verif/hwpe_stream_traffic_gen.sv,
+    rtl/verif/hwpe_stream_traffic_recv.sv,
+    rtl/verif/tb_fifo.sv,
   ]
-
