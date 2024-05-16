@@ -53,8 +53,10 @@ package hwpe_stream_package;
     logic signed [31:0] d0_stride;  // former word_stride
     logic        [31:0] d1_len;     // former block_length
     logic signed [31:0] d1_stride;  // former line_stride
+    logic        [31:0] d2_len;     
     logic signed [31:0] d2_stride;  // former block_stride
-    logic         [1:0] dim_enable_1h;
+    logic signed [31:0] d3_stride;
+    logic         [2:0] dim_enable_1h;
   } ctrl_addressgen_v3_t;
 
   typedef struct packed {
