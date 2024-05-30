@@ -55,7 +55,7 @@ module hwpe_stream_traffic_recv
     if(push_i.valid & push_i.ready) begin
       if(CHECK == 1'b1 && cnt < RESERVOIR_SIZE) begin
         if(push_i.data !== reservoir[cnt]) begin
-          $display("ERROR: data mismatch");
+          $display("ERROR: data mismatch expected = 0x%x, actual = 0x%x\n", reservoir[cnt], push_i.data);
           $finish;
         end
       end
