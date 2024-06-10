@@ -35,20 +35,23 @@
  * .. _hwpe_stream_split_params:
  * .. table:: **hwpe_stream_split** design-time parameters.
  *
- *   +------------------+-------------+---------------------------------------------+
- *   | **Name**         | **Default** | **Description**                             |
- *   +------------------+-------------+---------------------------------------------+
- *   | *NB_OUT_STREAMS* | 2           | Number of output HWPE-Stream streams.       |
- *   +------------------+-------------+---------------------------------------------+
- *   | *DATA_WIDTH_IN*  | 128         | Width of the input HWPE-Stream stream.      |
- *   +------------------+-------------+---------------------------------------------+
+ *   +------------------+-------------------+------------------------------------------------+
+ *   | **Name**         | **Default**       | **Description**                                |
+ *   +------------------+-------------------+------------------------------------------------+
+ *   | *NB_OUT_STREAMS* | 2                 | Number of output HWPE-Stream streams.          |
+ *   +------------------+-------------------+------------------------------------------------+
+ *   | *DATA_WIDTH_IN*  | 128               | Width of the input HWPE-Stream stream.         |
+ *   +------------------+-------------------+------------------------------------------------+
+ *   | *STRB_WIDTH_IN*  | DATA_WIDTH_IN / 8 | Width of the input HWPE-Stream strobe signal.  |
+ *   +------------------+-------------------+------------------------------------------------+
  */
 
 import hwpe_stream_package::*;
 
 module hwpe_stream_split #(
   parameter int unsigned NB_OUT_STREAMS = 2,
-  parameter int unsigned DATA_WIDTH_IN = 128
+  parameter int unsigned DATA_WIDTH_IN  = 128,
+  parameter int unsigned STRB_WIDTH_IN  = DATA_WIDTH_IN/8
 )
 (
   input  logic                   clk_i,
@@ -60,7 +63,7 @@ module hwpe_stream_split #(
 );
 
   parameter int unsigned DATA_WIDTH_OUT = DATA_WIDTH_IN/NB_OUT_STREAMS;
-  parameter int unsigned STRB_WIDTH_OUT = DATA_WIDTH_OUT/8;
+  parameter int unsigned STRB_WIDTH_OUT = STRB_WIDTH_IN/NB_OUT_STREAMS;
 
   logic [NB_OUT_STREAMS-1:0] stream_ready;
 
