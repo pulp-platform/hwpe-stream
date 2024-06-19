@@ -121,4 +121,10 @@ package hwpe_stream_package;
     logic [$clog2(NB_SERDES_STREAMS_MAX)-1:0] nb_contig_m1;
   } ctrl_serdes_t;
 
+  typedef enum logic[1:0] {
+    COPY,    // Fully copy all signals of the origin
+    PARITY,  // Copy handshake and strobe, reduce bitwidth to strobe width and do bytewise parity
+    ZERO     // Copy handshake, set both data and strobe width to 1 and do not use them
+  } copy_type_t;
+
 endpackage

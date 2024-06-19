@@ -29,6 +29,8 @@ sources:
       - rtl/basic/hwpe_stream_split.sv
       - rtl/fifo/hwpe_stream_fifo_ctrl.sv
       - rtl/fifo/hwpe_stream_fifo_scm.sv
+      - rtl/parity/hwpe_stream_copy_sink.sv
+      - rtl/parity/hwpe_stream_copy_source.sv
       - rtl/streamer/hwpe_stream_addressgen.sv
       - rtl/streamer/hwpe_stream_addressgen_v2.sv
       - rtl/streamer/hwpe_stream_addressgen_v3.sv
