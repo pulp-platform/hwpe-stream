@@ -66,12 +66,22 @@
  *       *d0_cnt  = 1;
  *       *d1_cnt  = *d1_cnt + 1;
  *     }
- *     else {
+ *     else if ((*d2_cnt < d2_len) || (dim_enable & 0x4 == 0)) {
  *       *d0_addr = 0;
  *       *d1_addr = 0;
  *       *d2_addr = *d2_addr + d2_stride;
  *       *d0_cnt  = 1;
  *       *d1_cnt  = 1;
+ *       *d2_cnt  = *d2_cnt + 1;
+ *     }
+ *     else {
+ *       *d0_addr = 0;
+ *       *d1_addr = 0;
+ *       *d2_addr = 0;
+ *       *d3_addr = *d3_addr + d3_stride;
+ *       *d0_cnt  = 1;
+ *       *d1_cnt  = 1;
+ *       *d2_cnt  = 1;
  *     }
  *     *ov_cnt = *ov_cnt + 1;
  *     return current_addr, done;
@@ -112,7 +122,11 @@
  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
  *   | *d2_stride*                      | `logic[31:0]`        | d2 stride in bytes                                                                                          |
  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
- *   | *dim_enable_1h*                  | `logic[1:0]`         | One-hot switch to enable 3-d counting (11), 2-d (01), or 1-d (00).                                          |
+ *   | *d2_len*                         | `logic[31:0]`        | d2 length in number of transactions                                                                         |
+ *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+ *   | *d3_stride*                      | `logic[31:0]`        | d3 stride in bytes                                                                                          |
+ * *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+ *   | *dim_enable_1h*                  | `logic[2:0]`         | One-hot switch to enable 4-d counting (111), 3-d (011), 2-d (001), or 1-d (000).                                          |
  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
  *
  * .. tabularcolumns:: |l|l|J|
@@ -153,6 +167,7 @@ module hwpe_stream_addressgen_v3
   logic signed [31:0] d0_stride;
   logic signed [31:0] d1_stride;
   logic signed [31:0] d2_stride;
+  logic signed [31:0] d3_stride;
 
   logic [31:0] gen_addr_int;
   logic        done;
@@ -161,22 +176,27 @@ module hwpe_stream_addressgen_v3
   logic [CNT-1:0]       d0_counter_d;
   logic [CNT-1:0]       d1_counter_d;
   logic [CNT-1:0]       d2_counter_d;
+  logic [CNT-1:0]       d3_counter_d;
   logic [31:0]          d0_addr_d;
   logic [31:0]          d1_addr_d;
   logic [31:0]          d2_addr_d;
+  logic [31:0]          d3_addr_d;
   logic [TRANS_CNT-1:0] overall_counter_q;
   logic [CNT-1:0]       d0_counter_q;
   logic [CNT-1:0]       d1_counter_q;
   logic [CNT-1:0]       d2_counter_q;
+  logic [CNT-1:0]       d3_counter_q;
   logic [31:0]          d0_addr_q;
   logic [31:0]          d1_addr_q;
   logic [31:0]          d2_addr_q;
+  logic [31:0]          d3_addr_q;
 
   logic        addr_valid_d, addr_valid_q;
 
   assign d0_stride   = $signed(ctrl_i.d0_stride);
   assign d1_stride   = $signed(ctrl_i.d1_stride);
   assign d2_stride   = $signed(ctrl_i.d2_stride);
+  assign d3_stride   = $signed(ctrl_i.d3_stride);
 
   // address generation
   always_comb
@@ -184,9 +204,11 @@ module hwpe_stream_addressgen_v3
     d0_addr_d         = d0_addr_q;
     d1_addr_d         = d1_addr_q;
     d2_addr_d         = d2_addr_q;
+    d3_addr_d         = d3_addr_q;
     d0_counter_d      = d0_counter_q;
     d1_counter_d      = d1_counter_q;
     d2_counter_d      = d2_counter_q;
+    d3_counter_d      = d3_counter_q;
     overall_counter_d = overall_counter_q;
     addr_valid_d      = addr_valid_q;
     done = '0;
@@ -203,13 +225,23 @@ module hwpe_stream_addressgen_v3
           d0_counter_d = 1;
           d1_counter_d = d1_counter_q + 1;
         end
-        else begin
+        else if ((d2_counter_q < ctrl_i.d2_len) || (ctrl_i.dim_enable_1h[2] == 1'b0)) begin
           d0_addr_d    = '0;
           d1_addr_d    = '0;
           d2_addr_d    = d2_addr_q + d2_stride;
           d0_counter_d = 1;
           d1_counter_d = 1;
           d2_counter_d = d2_counter_q + 1;
+        end
+        else begin
+          d0_addr_d    = '0;
+          d1_addr_d    = '0;
+          d2_addr_d    = '0;
+          d3_addr_d    = d3_addr_q + d3_stride;
+          d0_counter_d = 1;
+          d1_counter_d = 1;
+          d2_counter_d = 1;
+          d3_counter_d = d3_counter_q + 1;
         end
         overall_counter_d = overall_counter_q + 1;
       end
@@ -242,33 +274,39 @@ module hwpe_stream_addressgen_v3
     if (~rst_ni) begin
       d1_addr_q         <= '0;
       d2_addr_q         <= '0;
+      d3_addr_q         <= '0;
       d0_counter_q      <= '0;
       d1_counter_q      <= 1;
       d2_counter_q      <= 1;
+      d3_counter_q      <= 1;
       overall_counter_q <= '0;
       addr_valid_q      <= '0;
     end
     else if (clear_i) begin
       d1_addr_q         <= '0;
       d2_addr_q         <= '0;
+      d3_addr_q         <= '0;
       d0_counter_q      <= '0;
       d1_counter_q      <= 1;
       d2_counter_q      <= 1;
+      d3_counter_q      <= 1;
       overall_counter_q <= '0;
       addr_valid_q      <= '0;
     end
     else if(enable_i) begin
       d1_addr_q         <= d1_addr_d;
       d2_addr_q         <= d2_addr_d;
+      d3_addr_q         <= d3_addr_d;
       d0_counter_q      <= d0_counter_d;
       d1_counter_q      <= d1_counter_d;
       d2_counter_q      <= d2_counter_d;
+      d3_counter_q      <= d3_counter_d;
       overall_counter_q <= overall_counter_d;
       addr_valid_q      <= addr_valid_d;
     end
   end
 
-  assign gen_addr_int = ctrl_i.base_addr + d2_addr_q + d1_addr_q + d0_addr_q;
+  assign gen_addr_int = ctrl_i.base_addr + d3_addr_q + d2_addr_q + d1_addr_q + d0_addr_q;
 
   assign addr_o.data  = gen_addr_int;
   assign addr_o.strb  = '1;
