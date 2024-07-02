@@ -122,9 +122,10 @@ package hwpe_stream_package;
   } ctrl_serdes_t;
 
   typedef enum logic[1:0] {
-    COPY,    // Fully copy all signals of the origin
-    PARITY,  // Copy handshake and strobe, reduce bitwidth to strobe width and do bytewise parity
-    ZERO     // Copy handshake, set both data and strobe width to 1 and do not use them
-  } copy_type_t;
+    COPY,      // Fully copy all signals of the origin
+    PARITY,    // Copy handshake and strobe, reduce bitwidth to strobe width and do bytewise parity
+    STRB_ONLY, // Copy handshake and strobe, don't send data.
+    ZERO       // Copy handshake, set both data and strobe width to 1 and do not use them
+  } hwpe_copy_t;
 
 endpackage
