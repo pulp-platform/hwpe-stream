@@ -23,15 +23,18 @@
  * COPY_TYPE MUST match on connected sinks and sources!
  *
  * The available options are:
- * - COPY:   Fully copy of everything.
- *           DATA_WIDTH_COPY = DATA_WIDTH_ORIGINAL
- *           STRB_WIDTH_COPY = STRB_WIDTH_ORIGINAL
- * - PARITY: Reduction on the data width.
- *           DATA_WIDTH_COPY = STRB_WIDTH_ORIGINAL <--- Notice it is STRB here!
- *           STRB_WIDTH_COPY = STRB_WIDTH_ORIGINAL
- * - ZERO:   No data or strobe information.
- *           DATA_WIDTH_COPY = 1
- *           STRB_WIDTH_COPY = 1
+ * - COPY:      Fully copy of everything.
+ *              DATA_WIDTH_COPY = DATA_WIDTH_ORIGINAL
+ *              STRB_WIDTH_COPY = STRB_WIDTH_ORIGINAL
+ * - PARITY:    Reduction on the data width with parity per bit.
+ *              DATA_WIDTH_COPY = STRB_WIDTH_ORIGINAL <--- Notice it is STRB here!
+ *              STRB_WIDTH_COPY = STRB_WIDTH_ORIGINAL
+ * - STRB_ONLY: No data information.
+ *              DATA_WIDTH_COPY = 1
+ *              STRB_WIDTH_COPY = STRB_WIDTH_ORIGINAL
+ * - ZERO:      No data or strobe information.
+ *              DATA_WIDTH_COPY = 1
+ *              STRB_WIDTH_COPY = 1
  */
 
 import hwpe_stream_package::*;
@@ -63,6 +66,10 @@ module hwpe_stream_copy_source #(
     for (genvar i = 0; i < STRB_WIDTH ; i++) begin
       assign copy_o.data[i]  = ^original_i.data[i * DATA_WIDTH/STRB_WIDTH +: DATA_WIDTH/STRB_WIDTH];
     end
+    assign copy_o.strb = original_i.strb;
+  end
+  else if (COPY_TYPE == STRB_ONLY) begin
+    assign copy_o.data = DONT_CARE;
     assign copy_o.strb = original_i.strb;
   end
   else if (COPY_TYPE == ZERO) begin
