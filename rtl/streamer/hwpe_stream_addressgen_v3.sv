@@ -147,7 +147,8 @@ import hwpe_stream_package::*;
 module hwpe_stream_addressgen_v3
 #(
   parameter int unsigned TRANS_CNT  = 32,
-  parameter int unsigned CNT        = 32  // number of bits used within the internal counter
+  parameter int unsigned CNT        = 32,    // number of bits used within the internal counter
+  parameter bit [2:0] DIM_ENABLE_1H = 3'b011 // Number of dimensions enabled on HW side
 )
 (
   // global signals
@@ -215,17 +216,17 @@ module hwpe_stream_addressgen_v3
     if(addr_o.ready) begin
       if(overall_counter_q < ctrl_i.tot_len) begin
         addr_valid_d = 1'b1;
-        if((d0_counter_q < ctrl_i.d0_len) || (ctrl_i.dim_enable_1h[0] == 1'b0)) begin
+        if((d0_counter_q < ctrl_i.d0_len) || (ctrl_i.dim_enable_1h[0] == 1'b0) || (DIM_ENABLE_1H[0] == 1'b0)) begin
           d0_addr_d    = d0_addr_q + d0_stride;
           d0_counter_d = d0_counter_q + 1;
         end
-        else if ((d1_counter_q < ctrl_i.d1_len) || (ctrl_i.dim_enable_1h[1] == 1'b0)) begin
+        else if ((d1_counter_q < ctrl_i.d1_len) || (ctrl_i.dim_enable_1h[1] == 1'b0) || (DIM_ENABLE_1H[1] == 1'b0)) begin
           d0_addr_d    = '0;
           d1_addr_d    = d1_addr_q + d1_stride;
           d0_counter_d = 1;
           d1_counter_d = d1_counter_q + 1;
         end
-        else if ((d2_counter_q < ctrl_i.d2_len) || (ctrl_i.dim_enable_1h[2] == 1'b0)) begin
+        else if ((d2_counter_q < ctrl_i.d2_len) || (ctrl_i.dim_enable_1h[2] == 1'b0) || (DIM_ENABLE_1H[2] == 1'b0)) begin
           d0_addr_d    = '0;
           d1_addr_d    = '0;
           d2_addr_d    = d2_addr_q + d2_stride;
