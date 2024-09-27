@@ -156,7 +156,10 @@ module hwpe_stream_fifo #(
           end
           1'b1 : begin
             ns = MIDDLE;
-            push_pointer_d = push_pointer_q + 1'b1;
+            if(push_pointer_q == FIFO_DEPTH-1)
+              push_pointer_d = '0;
+            else
+              push_pointer_d = push_pointer_q + 1'b1;
             pop_pointer_d  = pop_pointer_q;
           end
         endcase
