@@ -23,11 +23,13 @@
  * .. _hwpe_stream_sink_realign_params:
  * .. table:: **hwpe_stream_sink_realign** design-time parameters.
  *
- *   +-------------------+-------------+--------------------------------------------------------------------------------------------------------------------------+
- *   | **Name**          | **Default** | **Description**                                                                                                          |
- *   +-------------------+-------------+--------------------------------------------------------------------------------------------------------------------------+
- *   | *DATA_WIDTH*      | 32          | Width of input/output streams.                                                                                           |
- *   +-------------------+-------------+--------------------------------------------------------------------------------------------------------------------------+
+ *   +-------------------+----------------+--------------------------------------------------------------------------------------------------------------------------+
+ *   | **Name**          | **Default**    | **Description**                                                                                                          |
+ *   +-------------------+----------------+--------------------------------------------------------------------------------------------------------------------------+
+ *   | *DATA_WIDTH*      | 32             | Width of input/output streams.                                                                                           |
+ *   +-------------------+----------------+--------------------------------------------------------------------------------------------------------------------------+
+ *   | *STRB_WIDTH*      | DATA_WIDTH / 8 | Width of input/output stream strobe signals.                                                                             |
+ *   +-------------------+----------------+--------------------------------------------------------------------------------------------------------------------------+
  *
  * .. tabularcolumns:: |l|l|J|
  * .. _hwpe_stream_sink_realign_ctrl:
@@ -56,7 +58,8 @@
 import hwpe_stream_package::*;
 
 module hwpe_stream_sink_realign #(
-  parameter int unsigned DATA_WIDTH = 32
+  parameter int unsigned DATA_WIDTH = 32,
+  parameter int unsigned STRB_WIDTH = DATA_WIDTH/8
 )
 (
   input  logic                    clk_i,
@@ -66,27 +69,27 @@ module hwpe_stream_sink_realign #(
 
   input  ctrl_realign_t           ctrl_i,
 
-  input  logic [DATA_WIDTH/8-1:0] strb_i,
+  input  logic [STRB_WIDTH-1:0] strb_i,
   hwpe_stream_intf_stream.sink    push_i,
   hwpe_stream_intf_stream.source  pop_o
 );
 
-  logic [DATA_WIDTH/8-1:0] strb_q;
-  logic unsigned [$clog2(DATA_WIDTH/8):0] strb_rotate_inv_d;
-  logic unsigned [$clog2(DATA_WIDTH/8):0] strb_rotate_inv_q;
-  logic unsigned [$clog2(DATA_WIDTH/8):0] strb_rotate_d;
-  logic unsigned [$clog2(DATA_WIDTH/8):0] strb_rotate_q;
-  logic unsigned [$clog2(DATA_WIDTH/8)+3:0] strb_rotate_d_shifted;
-  logic unsigned [$clog2(DATA_WIDTH/8)+3:0] strb_rotate_q_shifted;
-  logic unsigned [$clog2(DATA_WIDTH/8)+3:0] strb_rotate_inv_shifted;
+  logic [STRB_WIDTH-1:0] strb_q;
+  logic unsigned [$clog2(STRB_WIDTH):0] strb_rotate_inv_d;
+  logic unsigned [$clog2(STRB_WIDTH):0] strb_rotate_inv_q;
+  logic unsigned [$clog2(STRB_WIDTH):0] strb_rotate_d;
+  logic unsigned [$clog2(STRB_WIDTH):0] strb_rotate_q;
+  logic unsigned [$clog2(STRB_WIDTH)+3:0] strb_rotate_d_shifted;
+  logic unsigned [$clog2(STRB_WIDTH)+3:0] strb_rotate_q_shifted;
+  logic unsigned [$clog2(STRB_WIDTH)+3:0] strb_rotate_inv_shifted;
   logic [DATA_WIDTH-1:0]   stream_data_q;
-  logic [DATA_WIDTH/8-1:0] stream_strb_q;
-  logic [DATA_WIDTH/8-1:0] stream_strb_latest_q;
+  logic [STRB_WIDTH-1:0] stream_strb_q;
+  logic [STRB_WIDTH-1:0] stream_strb_latest_q;
 
   logic [DATA_WIDTH-1:0] int_data;
   logic [DATA_WIDTH-1:0] int_data_q;
-  logic [DATA_WIDTH/8-1:0] int_strb;
-  logic [DATA_WIDTH/8-1:0] int_strb_q;
+  logic [STRB_WIDTH-1:0] int_strb;
+  logic [STRB_WIDTH-1:0] int_strb_q;
   logic int_valid;
   logic int_valid_q;
   logic int_ready;
@@ -121,15 +124,15 @@ module hwpe_stream_sink_realign #(
   begin
     strb_rotate_inv_d = '0;
     if(ctrl_i.first) begin
-      for (int i=0; i<DATA_WIDTH/8; i++)
-        strb_rotate_inv_d += ($clog2(DATA_WIDTH/8))'(strb_i[i]);
+      for (int i=0; i<STRB_WIDTH; i++)
+        strb_rotate_inv_d += ($clog2(STRB_WIDTH))'(strb_i[i]);
     end
     else begin
-      for (int i=0; i<DATA_WIDTH/8; i++)
-        strb_rotate_inv_d += ($clog2(DATA_WIDTH/8))'(strb_q[i]);
+      for (int i=0; i<STRB_WIDTH; i++)
+        strb_rotate_inv_d += ($clog2(STRB_WIDTH))'(strb_q[i]);
     end
   end
-  assign strb_rotate_d = {($clog2(DATA_WIDTH/8)){1'b1}} - strb_rotate_inv_d + 1;
+  assign strb_rotate_d = {($clog2(STRB_WIDTH)){1'b1}} - strb_rotate_inv_d + 1;
   assign strb_rotate_d_shifted   = strb_rotate_d << 3;
   assign strb_rotate_q_shifted   = strb_rotate_q << 3;
   assign strb_rotate_inv_shifted = strb_rotate_inv_q << 3;
