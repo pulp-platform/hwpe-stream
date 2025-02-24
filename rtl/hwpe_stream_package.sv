@@ -15,6 +15,11 @@
 
 package hwpe_stream_package;
 
+  // Return either the argument minus 1 or 0 if 0; useful for IO vector width declaration
+  function automatic integer unsigned iomsb(input integer unsigned width);
+    return (width != 32'd0) ? unsigned'(width - 1) : 32'd0;
+  endfunction
+
   // realignment types
   parameter int unsigned HWPE_STREAM_REALIGN_SOURCE = 0;
   parameter int unsigned HWPE_STREAM_REALIGN_SINK   = 1;
