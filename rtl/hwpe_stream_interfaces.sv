@@ -65,7 +65,9 @@ interface hwpe_stream_intf_tcdm (
 
 endinterface // hwpe_stream_intf_tcdm
 
-interface hwpe_stream_intf_stream (
+interface hwpe_stream_intf_stream
+  import hwpe_stream_package::*;
+(
   input logic clk
 );
   parameter int unsigned DATA_WIDTH = 32; // used to default to -1 and always overridden --> not well supported by some tools
@@ -78,7 +80,7 @@ interface hwpe_stream_intf_stream (
   logic                    valid;
   logic                    ready;
   logic [DATA_WIDTH-1:0]   data;
-  logic [STRB_WIDTH-1:0]   strb;
+  logic [hwpe_stream_package::iomsb(STRB_WIDTH):0]   strb;
 
   modport source (
     output valid, data, strb,
