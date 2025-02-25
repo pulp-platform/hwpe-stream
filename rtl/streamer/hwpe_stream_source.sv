@@ -46,19 +46,21 @@
  * .. _hwpe_stream_source_params:
  * .. table:: **hwpe_stream_source** design-time parameters.
  *
- *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
- *   | **Name**          | **Default** | **Description**                                                                                                        |
- *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
- *   | *DECOUPLED*       | 0           | If 1, the module expects a HWPE-MemDecoupled interface instead of HWPE-Mem.                                            |
- *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
- *   | *DATA_WIDTH*      | 32          | Width of input/output streams (multiple of 32).                                                                        |
- *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
- *   | *LATCH_FIFO*      | 0           | If 1, use latches instead of flip-flops (requires special constraints in synthesis).                                   |
- *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
- *   | *TRANS_CNT*       | 16          | Number of bits supported in the transaction counter of the address generator, which will overflow at 2^ `TRANS_CNT`.   |
- *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
- *   | *REALIGNABLE*     | 1           | If set to 0, the source will not support non-word-aligned HWPE-Mem accesses.                                           |
- *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
+ *   +-------------------+----------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | **Name**          | **Default**    | **Description**                                                                                                        |
+ *   +-------------------+----------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | *DECOUPLED*       | 0              | If 1, the module expects a HWPE-MemDecoupled interface instead of HWPE-Mem.                                            |
+ *   +-------------------+----------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | *DATA_WIDTH*      | 32             | Width of input/output streams (multiple of 32).                                                                        |
+ *   +-------------------+----------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | *STRB_WIDTH*      | DATA_WIDTH / 8 | Width of input/output stream strobe signal.                                                                            |
+ *   +-------------------+----------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | *LATCH_FIFO*      | 0              | If 1, use latches instead of flip-flops (requires special constraints in synthesis).                                   |
+ *   +-------------------+----------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | *TRANS_CNT*       | 16             | Number of bits supported in the transaction counter of the address generator, which will overflow at 2^ `TRANS_CNT`.   |
+ *   +-------------------+----------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | *REALIGNABLE*     | 1              | If set to 0, the source will not support non-word-aligned HWPE-Mem accesses.                                           |
+ *   +-------------------+----------------+------------------------------------------------------------------------------------------------------------------------+
  *
  * .. tabularcolumns:: |l|l|J|
  * .. _hwpe_stream_source_ctrl:
@@ -96,6 +98,7 @@ module hwpe_stream_source
 #(
   // Stream interface params
   parameter int unsigned DATA_WIDTH    = 32,
+  parameter int unsigned STRB_WIDTH    = DATA_WIDTH/8,
   parameter int unsigned NB_TCDM_PORTS = DATA_WIDTH/32,
   parameter int unsigned DECOUPLED     = 0,
   parameter int unsigned LATCH_FIFO    = 0,
@@ -149,13 +152,15 @@ module hwpe_stream_source
   );
 
   hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( DATA_WIDTH )
+    .DATA_WIDTH ( DATA_WIDTH ),
+    .STRB_WIDTH ( STRB_WIDTH )
   ) misaligned_stream (
     .clk ( clk_i )
   );
 
   hwpe_stream_intf_stream #(
-    .DATA_WIDTH ( DATA_WIDTH )
+    .DATA_WIDTH ( DATA_WIDTH ),
+    .STRB_WIDTH ( STRB_WIDTH )
   ) misaligned_fifo_stream (
     .clk ( clk_i )
   );
@@ -194,7 +199,8 @@ module hwpe_stream_source
     if (REALIGNABLE) begin : realign_gen
       hwpe_stream_source_realign #(
         .DECOUPLED  ( DECOUPLED  ),
-        .DATA_WIDTH ( DATA_WIDTH )
+        .DATA_WIDTH ( DATA_WIDTH ),
+        .STRB_WIDTH ( STRB_WIDTH )
       ) i_realign (
         .clk_i      ( clk_i                                  ),
         .rst_ni     ( rst_ni                                 ),
@@ -222,6 +228,7 @@ module hwpe_stream_source
 
       hwpe_stream_fifo #(
         .DATA_WIDTH ( DATA_WIDTH ),
+        .STRB_WIDTH ( STRB_WIDTH ),
         .FIFO_DEPTH ( 2          ),
         .LATCH_FIFO ( LATCH_FIFO )
       ) i_misaligned_fifo (

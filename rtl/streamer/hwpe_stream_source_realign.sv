@@ -23,15 +23,17 @@
  * .. _hwpe_stream_source_realign_params:
  * .. table:: **hwpe_stream_source_realign** design-time parameters.
  *
- *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
- *   | **Name**          | **Default** | **Description**                                                                                                        |
- *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
- *   | *DECOUPLED*       | 0           | If 1, the module expects a HWPE-MemDecoupled interface instead of HWPE-Mem.                                            |
- *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
- *   | *DATA_WIDTH*      | 32          | Width of input/output streams.                                                                                         |
- *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
- *   | *STRB_FIFO_DEPTH* | 4           | Depth of the FIFO queue used for strobes; when full, the realigner will lower its ready signal at the input interface. |
- *   +-------------------+-------------+------------------------------------------------------------------------------------------------------------------------+
+ *   +-------------------+----------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | **Name**          | **Default**    | **Description**                                                                                                        |
+ *   +-------------------+----------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | *DECOUPLED*       | 0              | If 1, the module expects a HWPE-MemDecoupled interface instead of HWPE-Mem.                                            |
+ *   +-------------------+----------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | *DATA_WIDTH*      | 32             | Width of input/output streams.                                                                                         |
+ *   +-------------------+----------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | *STRB_WIDTH*      | DATA_WIDTH / 8 | Width of input/output stream strobe signal.                                                                            |
+ *   +-------------------+----------------+------------------------------------------------------------------------------------------------------------------------+
+ *   | *STRB_FIFO_DEPTH* | 4              | Depth of the FIFO queue used for strobes; when full, the realigner will lower its ready signal at the input interface. |
+ *   +-------------------+----------------+------------------------------------------------------------------------------------------------------------------------+
  *
  * .. tabularcolumns:: |l|l|J|
  * .. _hwpe_stream_source_realign_ctrl:
@@ -73,6 +75,7 @@ module hwpe_stream_source_realign #(
   parameter int unsigned DECOUPLED  = 0, // set to 1 if used with a TCDM stream that does not respect the zero-latency assumption,
                                          // e.g. it passes through a TCDM load FIFO.
   parameter int unsigned DATA_WIDTH = 32,
+  parameter int unsigned STRB_WIDTH = DATA_WIDTH/8,
   parameter int unsigned STRB_FIFO_DEPTH = 4
 )
 (
@@ -84,26 +87,26 @@ module hwpe_stream_source_realign #(
   input  ctrl_realign_t           ctrl_i,
   output flags_realign_t          flags_o,
 
-  input  logic [DATA_WIDTH/8-1:0] strb_i,
+  input  logic [STRB_WIDTH-1:0] strb_i,
   hwpe_stream_intf_stream.sink    push_i,
   hwpe_stream_intf_stream.source  pop_o
 );
 
-  logic [STRB_FIFO_DEPTH-1:0][DATA_WIDTH/8-1:0] strb_last_fifo, strb_first_fifo;
+  logic [STRB_FIFO_DEPTH-1:0][STRB_WIDTH-1:0] strb_last_fifo, strb_first_fifo;
   logic [STRB_FIFO_DEPTH-1:0] last_packet_fifo;
-  logic [DATA_WIDTH/8-1:0] int_strb;
+  logic [STRB_WIDTH-1:0] int_strb;
 
   logic [$clog2(STRB_FIFO_DEPTH):0] strb_first_cnt;
   logic [$clog2(STRB_FIFO_DEPTH):0] strb_last_cnt;
 
-  logic unsigned [$clog2(DATA_WIDTH/8):0] strb_rotate_d;
-  logic unsigned [$clog2(DATA_WIDTH/8):0] strb_rotate_inv_d;
+  logic unsigned [$clog2(STRB_WIDTH):0] strb_rotate_d;
+  logic unsigned [$clog2(STRB_WIDTH):0] strb_rotate_inv_d;
   logic [DATA_WIDTH-1:0]   stream_data_q;
-  logic unsigned [$clog2(DATA_WIDTH/8):0] strb_rotate_q;
-  logic unsigned [$clog2(DATA_WIDTH/8):0] strb_rotate_inv_q;
+  logic unsigned [$clog2(STRB_WIDTH):0] strb_rotate_q;
+  logic unsigned [$clog2(STRB_WIDTH):0] strb_rotate_inv_q;
 
-  logic unsigned [$clog2(DATA_WIDTH/8)+3:0] strb_rotate_q_shifted;
-  logic unsigned [$clog2(DATA_WIDTH/8)+3:0] strb_rotate_inv_q_shifted;
+  logic unsigned [$clog2(STRB_WIDTH)+3:0] strb_rotate_q_shifted;
+  logic unsigned [$clog2(STRB_WIDTH)+3:0] strb_rotate_inv_q_shifted;
 
   logic clk_gated;
 
@@ -283,10 +286,10 @@ module hwpe_stream_source_realign #(
   always_comb
   begin
     strb_rotate_d = '0;
-    for (int i=0; i<DATA_WIDTH/8; i++)
-      strb_rotate_d += ($clog2(DATA_WIDTH/8))'(int_strb[i]);
+    for (int i=0; i<STRB_WIDTH; i++)
+      strb_rotate_d += ($clog2(STRB_WIDTH))'(int_strb[i]);
   end
-  assign strb_rotate_inv_d = {($clog2(DATA_WIDTH/8)){1'b1}} - strb_rotate_d + 1;
+  assign strb_rotate_inv_d = {($clog2(STRB_WIDTH)){1'b1}} - strb_rotate_d + 1;
 
   always_ff @(posedge clk_gated or negedge rst_ni)
   begin
