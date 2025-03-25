@@ -82,15 +82,16 @@ module hwpe_stream_fifo #(
   hwpe_stream_intf_stream.source pop_o
 );
 
-  // Local Parameter
+  // Local Parameters
   localparam ADDR_DEPTH = (FIFO_DEPTH==1) ? 1 : $clog2(FIFO_DEPTH);
+  localparam STRB_WIDTH = (DATA_WIDTH+7)/8;
 
   enum logic [1:0] { EMPTY, FULL, MIDDLE } cs, ns;
   // Internal Signals
 
   logic [ADDR_DEPTH-1:0] pop_pointer_q,  pop_pointer_d;
   logic [ADDR_DEPTH-1:0] push_pointer_q, push_pointer_d;
-  logic [DATA_WIDTH+DATA_WIDTH/8-1:0] fifo_registers[FIFO_DEPTH-1:0];
+  logic [DATA_WIDTH+STRB_WIDTH-1:0] fifo_registers[FIFO_DEPTH-1:0];
   integer       i;
 
   assign flags_o.empty = (cs == EMPTY) ? 1'b1 : 1'b0;
@@ -232,8 +233,8 @@ module hwpe_stream_fifo #(
     endcase
   end
 
-  logic [DATA_WIDTH+DATA_WIDTH/8-1:0] data_out_int;
-  logic [DATA_WIDTH+DATA_WIDTH/8-1:0] data_in_int;
+  logic [DATA_WIDTH+STRB_WIDTH-1:0] data_out_int;
+  logic [DATA_WIDTH+STRB_WIDTH-1:0] data_in_int;
 
   generate
     if(LATCH_FIFO == 0) begin : fifo_ff_gen
@@ -263,7 +264,7 @@ module hwpe_stream_fifo #(
 
       hwpe_stream_fifo_scm #(
         .ADDR_WIDTH ( ADDR_DEPTH                ),
-        .DATA_WIDTH ( DATA_WIDTH + DATA_WIDTH/8 )
+        .DATA_WIDTH ( DATA_WIDTH + STRB_WIDTH )
       ) i_fifo_latch (
         .clk         ( clk_i                       ),
         .rst_n       ( rst_ni                      ),
@@ -282,7 +283,7 @@ module hwpe_stream_fifo #(
 
       hwpe_stream_fifo_scm_test_wrap #(
         .ADDR_WIDTH ( ADDR_DEPTH                ),
-        .DATA_WIDTH ( DATA_WIDTH + DATA_WIDTH/8 )
+        .DATA_WIDTH ( DATA_WIDTH + STRB_WIDTH )
       ) i_fifo_latch (
         .clk ( clk_i ),
         .rst_n       ( rst_ni                      ),
@@ -303,7 +304,7 @@ module hwpe_stream_fifo #(
     end
   endgenerate
 
-  assign pop_o.data = (pop_o.valid == 1'b1) ? data_out_int[DATA_WIDTH+DATA_WIDTH/8-1:DATA_WIDTH/8] : '0;
-  assign pop_o.strb = (pop_o.valid == 1'b1) ? data_out_int[DATA_WIDTH/8-1:0] : '0;
+  assign pop_o.data = (pop_o.valid == 1'b1) ? data_out_int[DATA_WIDTH+STRB_WIDTH-1:STRB_WIDTH] : '0;
+  assign pop_o.strb = (pop_o.valid == 1'b1) ? data_out_int[STRB_WIDTH-1:0] : '0;
 
 endmodule // hwpe_stream_fifo
