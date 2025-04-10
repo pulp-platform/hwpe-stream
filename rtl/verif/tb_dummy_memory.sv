@@ -15,8 +15,6 @@
  * Dummy memory transaction.
  */
 
-timeunit 1ps;
-timeprecision 1ps;
 
 module tb_dummy_memory
 #(
@@ -35,6 +33,9 @@ module tb_dummy_memory
   input  logic                enable_i,
   hwpe_stream_intf_tcdm.slave tcdm [MP-1:0]
 );
+
+  timeunit 1ps;
+  timeprecision 1ps;
 
   logic [MEMORY_SIZE-1:0][31:0] memory;
   int cnt = 0;
