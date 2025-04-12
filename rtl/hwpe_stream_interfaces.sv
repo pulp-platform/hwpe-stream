@@ -73,8 +73,8 @@ interface hwpe_stream_intf_stream
   parameter int unsigned DATA_WIDTH = 32; // used to default to -1 and always overridden --> not well supported by some tools
   parameter int unsigned STRB_WIDTH = (DATA_WIDTH+7)/8;
 `ifndef SYNTHESIS
-  parameter bit BYPASS_VCR_ASSERT = 1'b0;
-  parameter bit BYPASS_VDR_ASSERT = 1'b0;
+  parameter bit BYPASS_VCR_ASSERT = 1'b1;
+  parameter bit BYPASS_VDR_ASSERT = 1'b1;
 `endif
 
   logic                    valid;
