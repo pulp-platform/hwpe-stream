@@ -213,7 +213,7 @@ module hwpe_stream_addressgen_v3
     overall_counter_d = overall_counter_q;
     addr_valid_d      = addr_valid_q;
     done = '0;
-    if(addr_o.ready) begin
+    if(addr_o.ready || presample_i) begin
       if(overall_counter_q < ctrl_i.tot_len) begin
         addr_valid_d = 1'b1;
         if((d0_counter_q < ctrl_i.d0_len) || (ctrl_i.dim_enable_1h[0] == 1'b0) || (DIM_ENABLE_1H[0] == 1'b0)) begin
