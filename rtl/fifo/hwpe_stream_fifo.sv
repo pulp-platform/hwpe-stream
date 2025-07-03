@@ -97,7 +97,7 @@ module hwpe_stream_fifo #(
   assign flags_o.empty = (cs == EMPTY) ? 1'b1 : 1'b0;
   assign flags_o.full  = (cs == FULL)  ? 1'b1 : 1'b0;
   assign flags_o.almost_empty = (cs == MIDDLE) && ((pop_pointer_q == push_pointer_q-1 ) || ((pop_pointer_q == FIFO_DEPTH-1) && (push_pointer_q == 0) )) ? 1'b1 : 1'b0;
-  assign flags_o.almost_full  = (cs == MIDDLE) && ((pop_pointer_q == push_pointer_q-1 ) || ((pop_pointer_q == FIFO_DEPTH-1) && (push_pointer_q == 0) )) ? 1'b1 : 1'b0;
+  assign flags_o.almost_full  = (cs == MIDDLE) && ((push_pointer_q == pop_pointer_q-1 ) || ((push_pointer_q == FIFO_DEPTH-1) && (pop_pointer_q == 0) )) ? 1'b1 : 1'b0;
 
   // state update
   always_ff @(posedge clk_i, negedge rst_ni)
