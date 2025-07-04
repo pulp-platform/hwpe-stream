@@ -29,20 +29,23 @@
  * .. _hwpe_stream_fence_params:
  * .. table:: **hwpe_stream_fence** design-time parameters.
  *
- *   +------------------+-------------+---------------------------------------------+
- *   | **Name**         | **Default** | **Description**                             |
- *   +------------------+-------------+---------------------------------------------+
- *   | *NB_STREAMS*     | 2           | Number of input/output HWPE-Stream streams. |
- *   +------------------+-------------+---------------------------------------------+
- *   | *DATA_WIDTH*     | 32          | Width of the HWPE-Stream streams.           |
- *   +------------------+-------------+---------------------------------------------+
+ *   +------------------+----------------+---------------------------------------------+
+ *   | **Name**         | **Default**    | **Description**                             |
+ *   +------------------+----------------+---------------------------------------------+
+ *   | *NB_STREAMS*     | 2              | Number of input/output HWPE-Stream streams. |
+ *   +------------------+----------------+---------------------------------------------+
+ *   | *DATA_WIDTH*     | 32             | Width of the HWPE-Stream streams.           |
+ *   +------------------+----------------+---------------------------------------------+
+ *   | *STRB_WIDTH*     | DATA_WIDTH / 8 | Width of the HWPE-Stream strobe signal.     |
+ *   +------------------+----------------+---------------------------------------------+
  */
 
 import hwpe_stream_package::*;
 
 module hwpe_stream_fence #(
   parameter int unsigned NB_STREAMS = 2,
-  parameter int unsigned DATA_WIDTH = 32
+  parameter int unsigned DATA_WIDTH = 32,
+  parameter int unsigned STRB_WIDTH = DATA_WIDTH/8
 )
 (
   input  logic clk_i,
@@ -59,7 +62,7 @@ module hwpe_stream_fence #(
   logic                  out_valid;
   logic [NB_STREAMS-1:0] fence_state_q, fence_state_d;
   logic [NB_STREAMS-1:0][DATA_WIDTH-1:0]   data_q;
-  logic [NB_STREAMS-1:0][DATA_WIDTH/8-1:0] strb_q;
+  logic [NB_STREAMS-1:0][STRB_WIDTH-1:0] strb_q;
 
   generate
     for(genvar ii=0; ii<NB_STREAMS; ii++) begin : binding

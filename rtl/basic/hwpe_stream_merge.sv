@@ -35,20 +35,23 @@
  * .. _hwpe_stream_merge_params:
  * .. table:: **hwpe_stream_merge** design-time parameters.
  *
- *   +------------------+-------------+---------------------------------------------+
- *   | **Name**         | **Default** | **Description**                             |
- *   +------------------+-------------+---------------------------------------------+
- *   | *NB_IN_STREAMS*  | 2           | Number of input HWPE-Stream streams.        |
- *   +------------------+-------------+---------------------------------------------+
- *   | *DATA_WIDTH_IN*  | 32          | Width of the input HWPE-Stream streams.     |
- *   +------------------+-------------+---------------------------------------------+
+ *   +------------------+------------------+-----------------------------------------------+
+ *   | **Name**         | **Default**      | **Description**                               |
+ *   +------------------+------------------+-----------------------------------------------+
+ *   | *NB_IN_STREAMS*  | 2                | Number of input HWPE-Stream streams.          |
+ *   +------------------+------------------+-----------------------------------------------+
+ *   | *DATA_WIDTH_IN*  | 32               | Width of the input HWPE-Stream streams.       |
+ *   +------------------+------------------+-----------------------------------------------+
+ *   | *STRB_WIDTH_IN*  |DATA_WIDTH_IN / 8 | Width of the input HWPE-Stream strobe signal. |
+ *   +------------------+------------------+-----------------------------------------------+
  */
 
 import hwpe_stream_package::*;
 
 module hwpe_stream_merge #(
   parameter int unsigned NB_IN_STREAMS = 2,
-  parameter int unsigned DATA_WIDTH_IN = 32
+  parameter int unsigned DATA_WIDTH_IN = 32,
+  parameter int unsigned STRB_WIDTH_IN = DATA_WIDTH_IN/8
 )
 (
   input  logic                   clk_i,
@@ -58,8 +61,6 @@ module hwpe_stream_merge #(
   hwpe_stream_intf_stream.sink   push_i [NB_IN_STREAMS-1:0],
   hwpe_stream_intf_stream.source pop_o
 );
-
-  parameter STRB_WIDTH_IN = DATA_WIDTH_IN / 8;
 
   logic [NB_IN_STREAMS-1:0] stream_valid;
 
