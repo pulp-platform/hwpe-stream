@@ -66,7 +66,7 @@ module hwpe_stream_fence #(
 
       assign in_valid[ii] = push_i[ii].valid;
 
-      assign push_i[ii].ready = pop_o[ii].ready & ~fence_state_q[ii];
+      assign push_i[ii].ready = pop_o[ii].ready & (~fence_state_q[ii] | out_valid);
 
       assign pop_o[ii].valid = out_valid;
       assign pop_o[ii].data  = fence_state_q[ii] ? data_q[ii] : push_i[ii].data;
