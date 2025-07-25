@@ -15,12 +15,13 @@
  * This is a unit test for the hwpe stream sink realign module
  */
 
-timeunit 1ns;
-timeprecision 1ps;
 
 import hwpe_stream_package::*;
 
 module tb_hwpe_stream_source_realign_decoupled;
+
+  timeunit 1ns;
+  timeprecision 1ps;
 
   // parameters
   parameter PROB_STALL_SOURCE = 0.05;
