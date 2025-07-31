@@ -61,6 +61,8 @@ module hwpe_stream_serialize #(
   parameter int unsigned NB_IN_STREAMS = 2,
   parameter int unsigned CONTIG_LIMIT = 1024,
   parameter int unsigned DATA_WIDTH = 32,
+  parameter int unsigned ELEMENT_WIDTH = 8,
+  localparam int unsigned NUM_ELEMENTS = DATA_WIDTH/ELEMENT_WIDTH,
   parameter logic        SYNC_READY = 1'b0
 )
 (
@@ -80,7 +82,7 @@ module hwpe_stream_serialize #(
   // boilerplate for SystemVerilog compliance
   logic [NB_IN_STREAMS-1:0][DATA_WIDTH-1:0]   push_data;
   logic [NB_IN_STREAMS-1:0]                   push_valid;
-  logic [NB_IN_STREAMS-1:0][DATA_WIDTH/8-1:0] push_strb;
+  logic [NB_IN_STREAMS-1:0][NUM_ELEMENTS-1:0] push_strb;
   logic [NB_IN_STREAMS-1:0]                   push_ready;
 
   generate

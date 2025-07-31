@@ -32,6 +32,7 @@ sources:
       - rtl/streamer/hwpe_stream_addressgen.sv
       - rtl/streamer/hwpe_stream_addressgen_v2.sv
       - rtl/streamer/hwpe_stream_addressgen_v3.sv
+      - rtl/streamer/hwpe_stream_addressgen_v4.sv
       - rtl/streamer/hwpe_stream_sink_realign.sv
       - rtl/streamer/hwpe_stream_source_realign.sv
       - rtl/streamer/hwpe_stream_strbgen.sv
