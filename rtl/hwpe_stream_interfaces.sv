@@ -20,6 +20,8 @@
 interface hwpe_stream_intf_tcdm (
   input logic clk
 );
+  parameter int unsigned DATA_WIDTH = 32; // used to default to -1 and always overridden --> not well supported by some tools
+  parameter int unsigned STRB_WIDTH = DATA_WIDTH/8;
 `ifndef SYNTHESIS
   // the TRVR assert is disabled by default, as it is only valid for zero-latency
   // accesses (e.g. using FIFO queues breaks this assumption)
@@ -30,9 +32,9 @@ interface hwpe_stream_intf_tcdm (
   logic        gnt;
   logic [31:0] add;
   logic        wen;
-  logic [3:0]  be;
-  logic [31:0] data;
-  logic [31:0] r_data;
+  logic [STRB_WIDTH-1:0]  be;
+  logic [DATA_WIDTH-1:0] data;
+  logic [DATA_WIDTH-1:0] r_data;
   logic        r_valid;
 
   modport master (
