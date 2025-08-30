@@ -59,13 +59,13 @@ module hwpe_stream_fence_asymmetric #(
   hwpe_stream_intf_stream.source pop_1_o
 );
 
-  logic [NB_STREAMS-1:0] in_valid;
-  logic                  out_valid;
-  logic [NB_STREAMS-1:0] fence_state_q, fence_state_d;
-  logic [DATA_WIDTH_0-1:0]   data_0_q;
-  logic [DATA_WIDTH_1-1:0]   data_1_q;
-  logic [DATA_WIDTH_0/ELEM_WIDTH_0-1:0] strb_0_q;
-  logic [DATA_WIDTH_1/ELEM_WIDTH_1-1:0] strb_1_q;
+  logic [NB_STREAMS-1:0]     in_valid;
+  logic                      out_valid;
+  logic [NB_STREAMS-1:0]     fence_state_q, fence_state_d;
+  logic [DATA_WIDTH_0-1:0]   data_0_d, data_0_q;
+  logic [DATA_WIDTH_1-1:0]   data_1_d, data_1_q;
+  logic [DATA_WIDTH_0/ELEM_WIDTH_0-1:0] strb_0_d, strb_0_q;
+  logic [DATA_WIDTH_1/ELEM_WIDTH_1-1:0] strb_1_d, strb_1_q;
 
   logic [NB_STREAMS-1:0] in_strm_hs, out_strm_hs;
 
@@ -78,17 +78,58 @@ module hwpe_stream_fence_asymmetric #(
   assign in_valid[0] = push_0_i.valid;
   assign in_valid[1] = push_1_i.valid;
 
-  assign push_0_i.ready = bypass_i ? fence_state_q[0] ? 1'b0 : pop_0_o.ready : pop_0_o.ready & (~fence_state_q[0] | out_valid);
-  assign push_1_i.ready = bypass_i ? fence_state_q[1] ? 1'b0 : pop_1_o.ready : pop_1_o.ready & (~fence_state_q[1] | out_valid);
+  // Can take element if there is nothing registered or if registered there is a handshake 
+  assign push_0_i.ready = ~fence_state_q[0] || fence_state_q[0] & out_strm_hs[0];
+  assign push_1_i.ready = ~fence_state_q[1] || fence_state_q[1] & out_strm_hs[1];
 
-  assign pop_0_o.valid = bypass_i ? fence_state_q[0] ? 1'b1 : push_0_i.valid : out_valid;
-  assign pop_1_o.valid = bypass_i ? fence_state_q[1] ? 1'b1 : push_1_i.valid : out_valid;
+  assign out_valid     = &( fence_state_q | in_valid);
 
-  assign pop_0_o.data  = bypass_i ? (fence_state_q[0] ? data_0_q : push_0_i.data) : fence_state_q[0] ? data_0_q : push_0_i.data;
-  assign pop_1_o.data  = bypass_i ? (fence_state_q[1] ? data_1_q : push_1_i.data) : fence_state_q[1] ? data_1_q : push_1_i.data;
-  
-  assign pop_0_o.strb  = bypass_i ? fence_state_q[0] ? strb_0_q : push_0_i.strb : fence_state_q[0] ? strb_0_q : push_0_i.strb;
-  assign pop_1_o.strb  = bypass_i ? fence_state_q[1] ? strb_1_q : push_1_i.strb : fence_state_q[1] ? strb_1_q : push_1_i.strb;
+  assign pop_0_o.valid = bypass_i ? push_0_i.valid | fence_state_q[0] : out_valid;
+  assign pop_1_o.valid = bypass_i ? push_1_i.valid | fence_state_q[1] : out_valid;
+
+  assign pop_0_o.data = fence_state_q[0] ? data_0_q: push_0_i.data;
+  assign pop_1_o.data = fence_state_q[1] ? data_1_q: push_1_i.data;
+
+  assign pop_0_o.strb = fence_state_q[0] ? strb_0_q: push_0_i.data;
+  assign pop_1_o.strb = fence_state_q[1] ? strb_1_q: push_1_i.strb;
+
+  always_comb begin
+    fence_state_d[0] = fence_state_q[0];
+    data_0_d = data_0_q;
+    strb_0_d = strb_0_q;
+    if(in_strm_hs[0] & out_strm_hs[0]) begin 
+      fence_state_d[0] = fence_state_q[0];
+      data_0_d = fence_state_q[0] ? push_0_i.data : data_0_q; 
+      strb_0_d = fence_state_q[0] ? push_0_i.strb : strb_0_q; 
+    end else if (in_strm_hs[0] & ~out_strm_hs[0]) begin 
+      fence_state_d[0] = 1'b1;
+      data_0_d = push_0_i.data; 
+      strb_0_d = push_0_i.strb; 
+    end else if (~in_strm_hs[0] & out_strm_hs[0]) begin
+      fence_state_d[0] = 1'b0;
+      data_0_d = '0; 
+      strb_0_d = '0; 
+    end 
+  end 
+
+  always_comb begin
+    fence_state_d[1] = fence_state_q[1];
+    data_1_d = data_1_q;
+    strb_1_d = strb_1_q;
+    if(in_strm_hs[1] & out_strm_hs[1]) begin 
+      fence_state_d[1] = fence_state_q[1];
+      data_1_d = fence_state_q[1] ? push_1_i.data : data_1_q; 
+      strb_1_d = fence_state_q[1] ? push_1_i.strb : strb_1_q; 
+    end else if (in_strm_hs[1] & ~out_strm_hs[1]) begin 
+      fence_state_d[1] = 1'b1;
+      data_1_d = push_1_i.data; 
+      strb_1_d = push_1_i.strb; 
+    end else if (~in_strm_hs[1] & out_strm_hs[1]) begin
+      fence_state_d[1] = 1'b0;
+      data_1_d = '0; 
+      strb_1_d = '0; 
+    end 
+  end 
 
   always_ff @(posedge clk_i or negedge rst_ni)
   begin
@@ -103,30 +144,13 @@ module hwpe_stream_fence_asymmetric #(
       strb_0_q <= '0;
       strb_1_q <= '0;
     end else begin 
-      data_0_q <= bypass_i ? fence_state_q[0] ? data_0_q: '0 : (in_valid[0] && ~fence_state_q[0]) | (fence_state_q[0] & in_strm_hs[0]) ? push_0_i.data : data_0_q;
-      data_1_q <= bypass_i ? fence_state_q[1] ? data_1_q: '0 : (in_valid[1] && ~fence_state_q[1]) | (fence_state_q[1] & in_strm_hs[1]) ? push_1_i.data : data_1_q;
-      strb_0_q <= bypass_i ? fence_state_q[0] ? strb_0_q: '0 : (in_valid[0] && ~fence_state_q[0]) | (fence_state_q[0] & in_strm_hs[0]) ? push_0_i.strb : strb_0_q;
-      strb_1_q <= bypass_i ? fence_state_q[1] ? strb_1_q: '0 : (in_valid[1] && ~fence_state_q[1]) | (fence_state_q[1] & in_strm_hs[1]) ? push_1_i.strb : strb_1_q;
+      data_0_q <= data_0_d;
+      data_1_q <= data_1_d;
+      strb_0_q <= strb_0_d;
+      strb_1_q <= strb_1_d;
     end 
   end
 
-
-  always_comb
-  begin
-    out_valid = 1'b0;
-    fence_state_d[0] = bypass_i ? (fence_state_q[0] & out_strm_hs[0] ? 1'b0 : fence_state_q[0]): in_strm_hs[0] ? fence_state_q[0] : out_strm_hs[0] ?'0 : fence_state_q[0]; 
-    fence_state_d[1] = bypass_i ? (fence_state_q[1] & out_strm_hs[1] ? 1'b0 : fence_state_q[1]): in_strm_hs[1] ? fence_state_q[1] : out_strm_hs[1] ?'0 : fence_state_q[1]; 
-    if(&(in_valid | fence_state_q))
-      out_valid = bypass_i ? 1'b0 : 1'b1;
-    else begin 
-      if(~bypass_i) begin 
-        fence_state_d = fence_state_q | in_valid;
-      end else begin 
-        fence_state_d[0] = fence_state_q[0] ? out_strm_hs[0] ? 1'b0 : fence_state_q[0] : 1'b0;
-        fence_state_d[1] = fence_state_q[1] ? out_strm_hs[1] ? 1'b0 : fence_state_q[1] : 1'b0;
-      end 
-    end 
-  end
 
   always_ff @(posedge clk_i or negedge rst_ni)
   begin
