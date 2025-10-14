@@ -102,7 +102,7 @@ interface hwpe_stream_intf_stream
   // a valid handshake has occurred.
   property hwpe_stream_value_change_rule;
     @(posedge clk)
-    ($past(valid) & ~($past(valid) & $past(ready))) |-> ((data == $past(data)) && (strb == $past(strb))) | BYPASS_VCR_ASSERT;
+    ($past(valid) & ~($past(valid) & $past(ready))) |-> ((data === $past(data)) && (strb == $past(strb))) | BYPASS_VCR_ASSERT;
   endproperty;
 
   // The deassertion of valid (transition 1->0) can happen only in the cycle
