@@ -20,8 +20,9 @@
 interface hwpe_stream_intf_tcdm (
   input logic clk
 );
-  parameter int unsigned DATA_WIDTH = 32; // used to default to -1 and always overridden --> not well supported by some tools
-  parameter int unsigned STRB_WIDTH = DATA_WIDTH/8;
+  parameter int unsigned DATA_WIDTH    = 32; // used to default to -1 and always overridden --> not well supported by some tools
+  parameter int unsigned ELEMENT_WIDTH = 8; // by default a byte as the element width
+  parameter int unsigned STRB_WIDTH    = DATA_WIDTH/ELEMENT_WIDTH;
 `ifndef SYNTHESIS
   // the TRVR assert is disabled by default, as it is only valid for zero-latency
   // accesses (e.g. using FIFO queues breaks this assumption)
@@ -73,7 +74,8 @@ interface hwpe_stream_intf_stream
   input logic clk
 );
   parameter int unsigned DATA_WIDTH = 32; // used to default to -1 and always overridden --> not well supported by some tools
-  parameter int unsigned STRB_WIDTH = DATA_WIDTH/8;
+  parameter int unsigned ELEMENT_WIDTH = 8; // by default a byte as the element width
+  parameter int unsigned STRB_WIDTH = DATA_WIDTH/ELEMENT_WIDTH;
 `ifndef SYNTHESIS
   parameter bit BYPASS_VCR_ASSERT = 1'b0;
   parameter bit BYPASS_VDR_ASSERT = 1'b0;
