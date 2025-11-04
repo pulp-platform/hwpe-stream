@@ -20,6 +20,7 @@ sources:
       # Level 1
       - rtl/basic/hwpe_stream_assign.sv
       - rtl/basic/hwpe_stream_buffer.sv
+      - rtl/basic/hwpe_stream_copy.sv
       - rtl/basic/hwpe_stream_demux_static.sv
       - rtl/basic/hwpe_stream_deserialize.sv
       - rtl/basic/hwpe_stream_fence.sv

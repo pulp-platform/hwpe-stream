@@ -17,6 +17,7 @@ hwpe-stream:
     rtl/basic/hwpe_stream_split.sv,
     rtl/basic/hwpe_stream_serialize.sv,
     rtl/basic/hwpe_stream_deserialize.sv,
+    rtl/basic/hwpe_stream_copy.sv,
     rtl/fifo/hwpe_stream_fifo_earlystall_sidech.sv,
     rtl/fifo/hwpe_stream_fifo_earlystall.sv,
     rtl/fifo/hwpe_stream_fifo_scm.sv,
