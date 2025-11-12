@@ -24,37 +24,44 @@
 import hwpe_stream_package::*;
 
 module hwpe_stream_copy #(
-  parameter int unsigned NB_IN_STREAMS   = 1,
-  parameter int unsigned NB_COPY_STREAMS = 2
+  parameter int unsigned NB_COPY_STREAMS = 2,
+  parameter int unsigned DEMUXED = 0
 )
 (
-  hwpe_stream_intf_stream.sink   push_i [NB_IN_STREAMS-1:0],
-  hwpe_stream_intf_stream.source pop_o  [NB_COPY_STREAMS*NB_IN_STREAMS-1:0]
+  input  logic [$clog2(NB_COPY_STREAMS)-1:0] sel_i,
+
+  hwpe_stream_intf_stream.sink   push_i,
+  hwpe_stream_intf_stream.source pop_o  [NB_COPY_STREAMS-1:0]
 );
 
-  logic [NB_IN_STREAMS-1:0][NB_COPY_STREAMS-1:0] stream_ready;
+  logic [NB_COPY_STREAMS-1:0] stream_ready;
 
   generate
 
     for(genvar ii=0; ii<NB_COPY_STREAMS; ii++) begin : stream_copy
-      for(genvar jj=0; jj<NB_IN_STREAMS; jj++) begin
-        localparam ii_jj = ii*NB_IN_STREAMS+jj;
+      assign pop_o[ii].data  = push_i.data;
+      assign pop_o[ii].strb  = push_i.strb;
 
-        assign pop_o[ii_jj].data  = push_i[jj].data;
-        assign pop_o[ii_jj].strb  = push_i[jj].strb;
-        assign pop_o[ii_jj].valid = push_i[jj].valid;
+      // copy valid is broadcast to all outgoing streams
+      assign pop_o[ii].valid = push_i.valid;
 
-        // auxiliary for ready generation
-        assign stream_ready[jj][ii] = pop_o[ii_jj].ready;
+      // auxiliary for ready generation
+      assign stream_ready[ii] = pop_o[ii].ready;
 
-      end
     end
 
   endgenerate
 
-  for(genvar jj=0; jj<NB_IN_STREAMS; jj++) begin : ready_assign
-    // ready only when all copy streams are ready
-    assign push_i[jj].ready = & stream_ready[jj];
-  end
+  generate
+    if (DEMUXED) begin : ready_demuxed
+      // ready when selected copy stream is ready
+      assign push_i.ready = stream_ready[sel_i];
+    end
+    else begin : ready_bitwise_and
+      // ready only when all copy streams are ready
+      assign push_i.ready = & stream_ready;
+    end
+  endgenerate
+
 
 endmodule // hwpe_stream_copy
