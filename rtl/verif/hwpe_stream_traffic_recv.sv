@@ -15,8 +15,8 @@
  * The hwpe_stream_traffic_recv receives and optionally checks traffic.
  */
 
-timeunit 1ns;
-timeprecision 1ps;
+
+
 
 module hwpe_stream_traffic_recv
 #(

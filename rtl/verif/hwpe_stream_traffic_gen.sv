@@ -16,8 +16,8 @@
  * memory reservoir.
  */
 
-timeunit 1ns;
-timeprecision 1ps;
+
+
 
 import hwpe_stream_package::*;
 
