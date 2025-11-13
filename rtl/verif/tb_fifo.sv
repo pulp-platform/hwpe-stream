@@ -13,9 +13,6 @@
  * specific language governing permissions and limitations under the License.
  */
 
-timeunit 1ps;
-timeprecision 1ps;
-
 module tb;
 
   // parameters

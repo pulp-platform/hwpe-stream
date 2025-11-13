@@ -15,9 +15,6 @@
  * Dummy memory transaction.
  */
 
-timeunit 1ps;
-timeprecision 1ps;
-
 module tb_dummy_memory
 #(
   parameter MP          = 1,
