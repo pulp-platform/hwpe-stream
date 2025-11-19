@@ -28,6 +28,7 @@ sources:
       - rtl/basic/hwpe_stream_mux_static.sv
       - rtl/basic/hwpe_stream_serialize.sv
       - rtl/basic/hwpe_stream_split.sv
+      - rtl/basic/hwpe_stream_delay_assign.sv
       - rtl/fifo/hwpe_stream_fifo_ctrl.sv
       - rtl/fifo/hwpe_stream_fifo_scm.sv
       - rtl/parity/hwpe_stream_copy_sink.sv
@@ -65,4 +66,3 @@ sources:
           - rtl/verif/hwpe_stream_traffic_gen.sv
           - rtl/verif/hwpe_stream_traffic_recv.sv
           - rtl/verif/tb_fifo.sv
-
