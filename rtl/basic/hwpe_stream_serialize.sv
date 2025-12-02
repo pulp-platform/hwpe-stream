@@ -22,24 +22,26 @@
  * .. _hwpe_stream_serialize_params:
  * .. table:: **hwpe_stream_serialize** design-time parameters.
  *
- *   +------------------+-------------+-------------------------------------------------------+
- *   | **Name**         | **Default** | **Description**                                       |
- *   +------------------+-------------+-------------------------------------------------------+
- *   | *NB_IN_STREAMS*  | 2           | Number of input HWPE-Stream streams.                  |
- *   +------------------+-------------+-------------------------------------------------------+
- *   | *DATA_WIDTH*     | 32          | Width of the HWPE-Stream streams.                     |
- *   +------------------+-------------+-------------------------------------------------------+
- *   | *CONTIG_LIMIT*   | 1024        | Maximum number of contiguous packets per stream.      |
- *   +------------------+-------------+-------------------------------------------------------+
- *   | *SYNC_READY*     | 0           | If 0, each incoming stream is handshaken separately,  |
- *   |                  |             | which means that their producers must be independent. |
- *   |                  |             | If 1, the ready signal is "fenced", which means that  |
- *   |                  |             | all streams wait for the last stream to be ready to   |
- *   |                  |             | progress. This is useful, for example, when there is  |
- *   |                  |             | a single producer (e.g., `hwpe_stream_split`). Care   |
- *   |                  |             | must be taken to deadlocks, typically by inserting a  |
- *   |                  |             | decoupling FIFO.                                      |
- *   +------------------+-------------+-------------------------------------------------------+
+ *   +------------------+----------------+-------------------------------------------------------+
+ *   | **Name**         | **Default**    | **Description**                                       |
+ *   +------------------+----------------+-------------------------------------------------------+
+ *   | *NB_IN_STREAMS*  | 2              | Number of input HWPE-Stream streams.                  |
+ *   +------------------+----------------+-------------------------------------------------------+
+ *   | *DATA_WIDTH*     | 32             | Width of the HWPE-Stream streams.                     |
+ *   +------------------+----------------+-------------------------------------------------------+
+ *   | *STRB_WIDTH*     | DATA_WIDTH / 8 | Width of the HWPE-Stream strobe signal.               |
+ *   +------------------+----------------+-------------------------------------------------------+
+ *   | *CONTIG_LIMIT*   | 1024           | Maximum number of contiguous packets per stream.      |
+ *   +------------------+----------------+-------------------------------------------------------+
+ *   | *SYNC_READY*     | 0              | If 0, each incoming stream is handshaken separately,  |
+ *   |                  |                | which means that their producers must be independent. |
+ *   |                  |                | If 1, the ready signal is "fenced", which means that  |
+ *   |                  |                | all streams wait for the last stream to be ready to   |
+ *   |                  |                | progress. This is useful, for example, when there is  |
+ *   |                  |                | a single producer (e.g., `hwpe_stream_split`). Care   |
+ *   |                  |                | must be taken to deadlocks, typically by inserting a  |
+ *   |                  |                | decoupling FIFO.                                      |
+ *   +------------------+----------------+-------------------------------------------------------+
  *
   * .. tabularcolumns:: |l|l|J|
  * .. _hwpe_stream_serialize_ctrl:
@@ -61,6 +63,7 @@ module hwpe_stream_serialize #(
   parameter int unsigned NB_IN_STREAMS = 2,
   parameter int unsigned CONTIG_LIMIT = 1024,
   parameter int unsigned DATA_WIDTH = 32,
+  parameter int unsigned STRB_WIDTH = DATA_WIDTH/8,
   parameter logic        SYNC_READY = 1'b0
 )
 (
@@ -80,7 +83,7 @@ module hwpe_stream_serialize #(
   // boilerplate for SystemVerilog compliance
   logic [NB_IN_STREAMS-1:0][DATA_WIDTH-1:0]   push_data;
   logic [NB_IN_STREAMS-1:0]                   push_valid;
-  logic [NB_IN_STREAMS-1:0][DATA_WIDTH/8-1:0] push_strb;
+  logic [NB_IN_STREAMS-1:0][STRB_WIDTH-1:0] push_strb;
   logic [NB_IN_STREAMS-1:0]                   push_ready;
 
   generate

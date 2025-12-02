@@ -23,11 +23,13 @@
  * .. _hwpe_stream_strbgen_params:
  * .. table:: **hwpe_stream_strbgen** design-time parameters.
  *
- *   +--------------+-------------+--------------------------------+
- *   | **Name**     | **Default** | **Description**                |
- *   +--------------+-------------+--------------------------------+
- *   | *DATA_WIDTH* | 32          | Width of input/output streams. |
- *   +--------------+-------------+--------------------------------+
+ *   +--------------+----------------+---------------------------------------------+
+ *   | **Name**     | **Default**    | **Description**                             |
+ *   +--------------+----------------+---------------------------------------------+
+ *   | *DATA_WIDTH* | 32             | Width of input/output streams.              |
+ *   +--------------+----------------+---------------------------------------------+
+ *   | *STRB_WIDTH* | DATA_WIDTH / 8 | Width of input/output stream strobe signal. |
+ *   +--------------+----------------+---------------------------------------------+
  *
  * .. tabularcolumns:: |l|l|J|
  * .. _hwpe_stream_strbgen_ctrl:
@@ -63,7 +65,8 @@ import hwpe_stream_package::*;
 
 module hwpe_stream_strbgen
 #(
-  parameter int unsigned DATA_WIDTH = 32
+  parameter int unsigned DATA_WIDTH = 32,
+  parameter int unsigned STRB_WIDTH = DATA_WIDTH/8
 )
 (
   // global signals
@@ -90,8 +93,8 @@ module hwpe_stream_strbgen
       cnt <= '0;
     end
     else if(push_i.valid & push_i.ready) begin
-      if(cnt < ctrl_i.line_length-8'h1) begin
-        cnt <= cnt + 8'h1;
+      if(cnt < ctrl_i.line_length-'h1) begin
+        cnt <= cnt + 'h1;
       end
       else begin
         cnt <= '0;
@@ -99,11 +102,11 @@ module hwpe_stream_strbgen
     end
   end
 
-  logic [DATA_WIDTH/8-1:0] decoded_remainder;
+  logic [STRB_WIDTH-1:0] decoded_remainder;
   always_comb
   begin
     decoded_remainder = '0;
-    for(int i=0; i<DATA_WIDTH/8; i++) begin
+    for(int i=0; i<STRB_WIDTH; i++) begin
       if(i<ctrl_i.line_length_remainder)
         decoded_remainder[i] = 1'b1;
     end
@@ -111,7 +114,7 @@ module hwpe_stream_strbgen
 
   assign pop_o.valid = push_i.valid;
   assign pop_o.data  = push_i.data;
-  assign pop_o.strb  = ((cnt == ctrl_i.line_length-8'h1) && (ctrl_i.line_length_remainder != '0)) ? push_i.strb & decoded_remainder : push_i.strb;
+  assign pop_o.strb  = ((cnt == ctrl_i.line_length-'h1) && (ctrl_i.line_length_remainder != '0)) ? push_i.strb & decoded_remainder : push_i.strb;
 
   assign push_i.ready = pop_o.ready;
 

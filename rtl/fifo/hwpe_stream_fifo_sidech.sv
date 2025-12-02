@@ -18,6 +18,7 @@ import hwpe_stream_package::*;
 
 module hwpe_stream_fifo_sidech #(
   parameter int unsigned DATA_WIDTH = 32,
+  parameter int unsigned STRB_WIDTH = DATA_WIDTH/8,
   parameter int unsigned FIFO_DEPTH = 8,
   parameter int unsigned LATCH_FIFO = 0,
   parameter int unsigned SIDECH_WIDTH = 1
@@ -44,7 +45,7 @@ module hwpe_stream_fifo_sidech #(
 
   logic [ADDR_DEPTH-1:0] pop_pointer_q,  pop_pointer_d;
   logic [ADDR_DEPTH-1:0] push_pointer_q, push_pointer_d;
-  logic [DATA_WIDTH+DATA_WIDTH/8+SIDECH_WIDTH-1:0] fifo_registers[FIFO_DEPTH-1:0];
+  logic [DATA_WIDTH+STRB_WIDTH+SIDECH_WIDTH-1:0] fifo_registers[FIFO_DEPTH-1:0];
   integer       i;
 
   assign flags_o.empty = (cs == EMPTY) ? 1'b1 : 1'b0;
@@ -163,8 +164,8 @@ module hwpe_stream_fifo_sidech #(
     endcase
   end
 
-  logic [DATA_WIDTH+DATA_WIDTH/8+SIDECH_WIDTH-1:0] data_out_int;
-  logic [DATA_WIDTH+DATA_WIDTH/8+SIDECH_WIDTH-1:0] data_in_int;
+  logic [DATA_WIDTH+STRB_WIDTH+SIDECH_WIDTH-1:0] data_out_int;
+  logic [DATA_WIDTH+STRB_WIDTH+SIDECH_WIDTH-1:0] data_in_int;
 
   generate
     if(LATCH_FIFO == 0) begin : fifo_ff_gen
@@ -193,8 +194,8 @@ module hwpe_stream_fifo_sidech #(
       assign data_in_int = { sidech_i, push_i.data, push_i.strb };
 
       hwpe_stream_fifo_scm #(
-        .ADDR_WIDTH( ADDR_DEPTH                              ),
-        .DATA_WIDTH( DATA_WIDTH + DATA_WIDTH/8 +SIDECH_WIDTH )
+        .ADDR_WIDTH( ADDR_DEPTH                            ),
+        .DATA_WIDTH( DATA_WIDTH + STRB_WIDTH +SIDECH_WIDTH )
       ) i_fifo_latch (
         .clk ( clk_i ),
         .rst_n       ( rst_ni                      ),
@@ -209,8 +210,8 @@ module hwpe_stream_fifo_sidech #(
     end
   endgenerate
 
-  assign sidech_o   = (pop_o.valid == 1'b1) ? data_out_int[DATA_WIDTH+DATA_WIDTH/8+SIDECH_WIDTH-1:DATA_WIDTH+DATA_WIDTH/8] : '0;
-  assign pop_o.data = (pop_o.valid == 1'b1) ? data_out_int[DATA_WIDTH+DATA_WIDTH/8-1:DATA_WIDTH/8] : '0;
-  assign pop_o.strb = (pop_o.valid == 1'b1) ? data_out_int[DATA_WIDTH/8-1:0] : '0;
+  assign sidech_o   = (pop_o.valid == 1'b1) ? data_out_int[DATA_WIDTH+STRB_WIDTH+SIDECH_WIDTH-1:DATA_WIDTH+STRB_WIDTH] : '0;
+  assign pop_o.data = (pop_o.valid == 1'b1) ? data_out_int[DATA_WIDTH+STRB_WIDTH-1:STRB_WIDTH] : '0;
+  assign pop_o.strb = (pop_o.valid == 1'b1) ? data_out_int[STRB_WIDTH-1:0] : '0;
 
 endmodule // hwpe_stream_fifo_sidech
