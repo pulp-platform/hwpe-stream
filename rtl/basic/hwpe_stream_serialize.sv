@@ -62,6 +62,7 @@ module hwpe_stream_serialize #(
   parameter int unsigned CONTIG_LIMIT = 1024,
   parameter int unsigned DATA_WIDTH = 32,
   parameter int unsigned ELEMENT_WIDTH = 8,
+  parameter int unsigned MODE = 0,
   localparam int unsigned NUM_ELEMENTS = DATA_WIDTH/ELEMENT_WIDTH,
   parameter logic        SYNC_READY = 1'b0
 )
@@ -90,7 +91,7 @@ module hwpe_stream_serialize #(
 
       assign push_data [ii]   = push_i[ii].data;
       assign push_strb [ii]   = push_i[ii].strb;
-      assign push_valid[ii]   = push_i[ii].valid;
+      assign push_valid[ii]   = push_i[ii].valid & stream_cnt_en;
       assign push_i[ii].ready = push_ready[ii];
 
     end
@@ -101,9 +102,16 @@ module hwpe_stream_serialize #(
   assign pop_o.valid = push_valid[stream_cnt_q];
   assign pop_o.strb  = push_strb [stream_cnt_q];
 
+  logic last_stream; 
+
+  if(MODE == 0)
+    assign last_stream = 1'b0;
+  else 
+    assign last_stream = (contig_cnt_q == ctrl_i.nb_contig_m1 - 1)  ? stream_cnt_en & pop_o.ready : 1'b0;
+
   if(SYNC_READY) begin : sync_ready_gen
     for(genvar ii=0; ii<NB_IN_STREAMS; ii++) begin : sync_ready_loop_gen
-      assign push_ready[ii] = (stream_cnt_q == NB_IN_STREAMS-1) ? stream_cnt_en & pop_o.ready : 1'b0;
+      assign push_ready[ii] = (stream_cnt_q == NB_IN_STREAMS-1) || (contig_cnt_q == ctrl_i.nb_contig_m1 - 1)  ? stream_cnt_en & pop_o.ready : 1'b0;
     end
   end
   else begin : no_sync_ready_gen
@@ -123,7 +131,7 @@ module hwpe_stream_serialize #(
     else if(clear_i) begin
       stream_cnt_q <= '0;
     end
-    else if(stream_cnt_en & pop_o.valid & pop_o.ready) begin
+    else begin
       stream_cnt_q <= stream_cnt_d;
     end
   end
@@ -136,7 +144,7 @@ module hwpe_stream_serialize #(
     end
     else begin
       if(stream_cnt_q < NB_IN_STREAMS-1) begin
-        stream_cnt_d = stream_cnt_q + 1;
+        stream_cnt_d = last_stream ? '0 : stream_cnt_q + (stream_cnt_en & pop_o.valid & pop_o.ready);
       end
       else begin
         stream_cnt_d = '0;
@@ -153,7 +161,7 @@ module hwpe_stream_serialize #(
     else if(clear_i) begin
       contig_cnt_q <= '0;
     end
-    else if(pop_o.valid & pop_o.ready) begin
+    else begin
       contig_cnt_q <= contig_cnt_d;
     end
   end
@@ -162,13 +170,16 @@ module hwpe_stream_serialize #(
   begin : contig_counter_comb
     contig_cnt_d = '0;
     if(contig_cnt_q < ctrl_i.nb_contig_m1) begin
-      contig_cnt_d = contig_cnt_q + 1;
+      contig_cnt_d = last_stream ? '0 : contig_cnt_q + (pop_o.valid & pop_o.ready);
     end
     else begin
       contig_cnt_d = '0;
     end
   end
 
-  assign stream_cnt_en = contig_cnt_q < ctrl_i.nb_contig_m1 ? 1'b0 : 1'b1;
+  if(MODE == 0)
+    assign stream_cnt_en = contig_cnt_q < ctrl_i.nb_contig_m1 ? 1'b0 : 1'b1;
+  else  
+    assign stream_cnt_en = contig_cnt_q <= ctrl_i.nb_contig_m1 ? 1'b1 : 1'b0;
 
 endmodule // hwpe_stream_serialize
