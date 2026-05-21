@@ -50,14 +50,18 @@
  *       current_addr = base_addr + *d1_addr + *d0_addr;
  *     }
  *     else { // 3-dimensional streaming
- *       current_addr = base_addr + *d2_addr + *d1_addr + *d0_addr;
+ *       // On the last d1 iter pick d2_addr_last (parallel accumulator); set d2_stride_last = d2_stride to disable
+ *       current_addr = base_addr +
+ *                      (*d1_cnt == d1_len ? *d2_addr_last : *d2_addr) +
+ *                      *d1_addr + *d0_addr;
  *     }
  *     // update counters and dimensional addresses
  *     if(*ov_cnt == tot_len) {
  *       done = 1;
  *     }
  *     if((*d0_cnt < d0_len) || (dim_enable & 0x1 == 0)) {
- *       *d0_addr = *d0_addr + d0_stride;
+ *       // On the last d1 iter pick d0_stride_last; set d0_stride_last = d0_stride to disable
+ *       *d0_addr = *d0_addr + (*d1_cnt == d1_len ? d0_stride_last : d0_stride);
  *       *d0_cnt  = *d0_cnt + 1;
  *     }
  *     else if ((*d1_cnt < d1_len) || (dim_enable & 0x2 == 0)) {
@@ -67,9 +71,10 @@
  *       *d1_cnt  = *d1_cnt + 1;
  *     }
  *     else if ((*d2_cnt < d2_len) || (dim_enable & 0x4 == 0)) {
- *       *d0_addr = 0;
- *       *d1_addr = 0;
- *       *d2_addr = *d2_addr + d2_stride;
+ *       *d0_addr      = 0;
+ *       *d1_addr      = 0;
+ *       *d2_addr      = *d2_addr      + d2_stride;
+ *       *d2_addr_last = *d2_addr_last + d2_stride_last;
  *       *d0_cnt  = 1;
  *       *d1_cnt  = 1;
  *       *d2_cnt  = *d2_cnt + 1;
@@ -166,8 +171,10 @@ module hwpe_stream_addressgen_v4
 );
 
   logic signed [31:0] d0_stride;
+  logic signed [31:0] d0_stride_last;
   logic signed [31:0] d1_stride;
   logic signed [31:0] d2_stride;
+  logic signed [31:0] d2_stride_last;
   logic signed [31:0] d3_stride;
   logic signed [31:0] d4_stride;
 
@@ -185,6 +192,7 @@ module hwpe_stream_addressgen_v4
   logic [31:0]          d0_addr_d;
   logic [31:0]          d1_addr_d;
   logic [31:0]          d2_addr_d;
+  logic [31:0]          d2_addr_last_d;
   logic [31:0]          d3_addr_d;
   logic [31:0]          d4_addr_d;
   logic [TRANS_CNT-1:0] overall_counter_q;
@@ -196,16 +204,19 @@ module hwpe_stream_addressgen_v4
   logic [31:0]          d0_addr_q;
   logic [31:0]          d1_addr_q;
   logic [31:0]          d2_addr_q;
+  logic [31:0]          d2_addr_last_q;
   logic [31:0]          d3_addr_q;
   logic [31:0]          d4_addr_q;
 
   logic        addr_valid_d, addr_valid_q;
 
-  assign d0_stride   = $signed(ctrl_i.d0_stride);
-  assign d1_stride   = $signed(ctrl_i.d1_stride);
-  assign d2_stride   = $signed(ctrl_i.d2_stride);
-  assign d3_stride   = $signed(ctrl_i.d3_stride);
-  assign d4_stride   = $signed(ctrl_i.d4_stride);
+  assign d0_stride      = $signed(ctrl_i.d0_stride);
+  assign d0_stride_last = $signed(ctrl_i.d0_stride_last);
+  assign d1_stride      = $signed(ctrl_i.d1_stride);
+  assign d2_stride      = $signed(ctrl_i.d2_stride);
+  assign d2_stride_last = $signed(ctrl_i.d2_stride_last);
+  assign d3_stride      = $signed(ctrl_i.d3_stride);
+  assign d4_stride      = $signed(ctrl_i.d4_stride);
 
   // address generation
   always_comb
@@ -213,6 +224,7 @@ module hwpe_stream_addressgen_v4
     d0_addr_d         = d0_addr_q;
     d1_addr_d         = d1_addr_q;
     d2_addr_d         = d2_addr_q;
+    d2_addr_last_d    = d2_addr_last_q;
     d3_addr_d         = d3_addr_q;
     d4_addr_d         = d4_addr_q;
     d0_counter_d      = d0_counter_q;
@@ -227,7 +239,7 @@ module hwpe_stream_addressgen_v4
       if(overall_counter_q < ctrl_i.tot_len) begin
         addr_valid_d = 1'b1;
         if((d0_counter_q < ctrl_i.d0_len) || (ctrl_i.dim_enable_1h[0] == 1'b0) || (DIM_ENABLE_1H[0] == 1'b0)) begin
-          d0_addr_d    = d0_addr_q + d0_stride;
+          d0_addr_d    = d0_addr_q + ((d1_counter_q == ctrl_i.d1_len) ? d0_stride_last : d0_stride);
           d0_counter_d = d0_counter_q + 1;
         end
         else if ((d1_counter_q < ctrl_i.d1_len) || (ctrl_i.dim_enable_1h[1] == 1'b0) || (DIM_ENABLE_1H[1] == 1'b0)) begin
@@ -237,33 +249,36 @@ module hwpe_stream_addressgen_v4
           d1_counter_d = d1_counter_q + 1;
         end
         else if ((d2_counter_q < ctrl_i.d2_len) || (ctrl_i.dim_enable_1h[2] == 1'b0) || (DIM_ENABLE_1H[2] == 1'b0)) begin
-          d0_addr_d    = '0;
-          d1_addr_d    = '0;
-          d2_addr_d    = d2_addr_q + d2_stride;
-          d0_counter_d = 1;
-          d1_counter_d = 1;
-          d2_counter_d = d2_counter_q + 1;
+          d0_addr_d      = '0;
+          d1_addr_d      = '0;
+          d2_addr_d      = d2_addr_q      + d2_stride;
+          d2_addr_last_d = d2_addr_last_q + d2_stride_last;
+          d0_counter_d   = 1;
+          d1_counter_d   = 1;
+          d2_counter_d   = d2_counter_q + 1;
         end
         else if ((d3_counter_q < ctrl_i.d3_len) || (ctrl_i.dim_enable_1h[3] == 1'b0) || (DIM_ENABLE_1H[3] == 1'b0)) begin
-          d0_addr_d    = '0;
-          d1_addr_d    = '0;
-          d2_addr_d    = '0;
-          d3_addr_d    = d3_addr_q + d3_stride;
-          d0_counter_d = 1;
-          d1_counter_d = 1;
-          d2_counter_d = 1;
-          d3_counter_d = d3_counter_q + 1;
+          d0_addr_d      = '0;
+          d1_addr_d      = '0;
+          d2_addr_d      = '0;
+          d2_addr_last_d = '0;
+          d3_addr_d      = d3_addr_q + d3_stride;
+          d0_counter_d   = 1;
+          d1_counter_d   = 1;
+          d2_counter_d   = 1;
+          d3_counter_d   = d3_counter_q + 1;
         end
         else begin
-          d0_addr_d    = '0;
-          d1_addr_d    = '0;
-          d2_addr_d    = '0;
-          d3_addr_d    = '0;
-          d4_addr_d    = d4_addr_q + d4_stride;
-          d0_counter_d = 1;
-          d1_counter_d = 1;
-          d2_counter_d = 1;
-          d3_counter_d = 1;
+          d0_addr_d      = '0;
+          d1_addr_d      = '0;
+          d2_addr_d      = '0;
+          d2_addr_last_d = '0;
+          d3_addr_d      = '0;
+          d4_addr_d      = d4_addr_q + d4_stride;
+          d0_counter_d   = 1;
+          d1_counter_d   = 1;
+          d2_counter_d   = 1;
+          d3_counter_d   = 1;
           d4_counter_d = d4_counter_q + 1;
         end
         overall_counter_d = overall_counter_q + 1;
@@ -297,6 +312,7 @@ module hwpe_stream_addressgen_v4
     if (~rst_ni) begin
       d1_addr_q         <= '0;
       d2_addr_q         <= '0;
+      d2_addr_last_q    <= '0;
       d3_addr_q         <= '0;
       d4_addr_q         <= '0;
       d0_counter_q      <= '0;
@@ -310,6 +326,7 @@ module hwpe_stream_addressgen_v4
     else if (clear_i) begin
       d1_addr_q         <= '0;
       d2_addr_q         <= '0;
+      d2_addr_last_q    <= '0;
       d3_addr_q         <= '0;
       d4_addr_q         <= '0;
       d0_counter_q      <= '0;
@@ -323,6 +340,7 @@ module hwpe_stream_addressgen_v4
     else if(enable_i) begin
       d1_addr_q         <= d1_addr_d;
       d2_addr_q         <= d2_addr_d;
+      d2_addr_last_q    <= d2_addr_last_d;
       d3_addr_q         <= d3_addr_d;
       d4_addr_q         <= d4_addr_d;
       d0_counter_q      <= d0_counter_d;
@@ -335,7 +353,9 @@ module hwpe_stream_addressgen_v4
     end
   end
 
-  assign gen_addr_int = ctrl_i.base_addr + d4_addr_q + d3_addr_q + d2_addr_q + d1_addr_q + d0_addr_q;
+  assign gen_addr_int = ctrl_i.base_addr + d4_addr_q + d3_addr_q +
+                        ((d1_counter_q == ctrl_i.d1_len) ? d2_addr_last_q : d2_addr_q) +
+                        d1_addr_q + d0_addr_q;
 
   assign addr_o.data  = gen_addr_int;
   assign addr_o.strb  = '1;
