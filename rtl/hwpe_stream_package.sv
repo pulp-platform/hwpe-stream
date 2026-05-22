@@ -69,12 +69,13 @@ package hwpe_stream_package;
     logic        [31:0] tot_len;    // former word_length
     logic        [31:0] d0_len;     // former line_length
     logic signed [31:0] d0_stride;  // former word_stride
-    logic signed [31:0] d0_stride_last;
+    logic signed [31:0] d0_stride_last_d1;
+    logic signed [31:0] d0_stride_last_d2;
     logic        [31:0] d1_len;     // former block_length
     logic signed [31:0] d1_stride;  // former line_stride
     logic        [31:0] d2_len;
     logic signed [31:0] d2_stride;  // former block_stride
-    logic signed [31:0] d2_stride_last;
+    logic signed [31:0] d2_stride_last_d1;
     logic        [31:0] d3_len;
     logic signed [31:0] d3_stride;
     logic signed [31:0] d4_stride;
