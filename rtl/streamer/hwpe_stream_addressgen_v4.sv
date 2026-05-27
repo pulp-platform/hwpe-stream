@@ -1,5 +1,5 @@
 /*
- * hwpe_stream_addressgen_v3.sv
+ * hwpe_stream_addressgen_v4.sv
  * Francesco Conti <f.conti@unibo.it>
  *
  * Copyright (C) 2014-2020 ETH Zurich, University of Bologna
@@ -14,12 +14,12 @@
  */
 
 /**
- * The **hwpe_stream_addressgen_v3** module is used to generate addresses to
+ * The **hwpe_stream_addressgen_v4** module is used to generate addresses to
  * load or store HWPE-Stream stream. In this version of the address generator,
  * the address is itself carried within a HWPE-Stream, making it easily stallable.
  * The address generator can be used to generate address from a
- * three-dimensional space, which can be visited with configurable strides in all
- * three dimensions.
+ * four-dimensional space, which can be visited with configurable strides in all
+ * four dimensions.
  *
  * The multiple loop functionality is partially overlapped by the functionality
  * provided by the microcode processor `hwce_ctrl_ucode` that can be embedded
@@ -33,7 +33,7 @@
  *
  * .. code-block:: C
  *
- *   hwpe_stream_addressgen_v3(
+ *   hwpe_stream_addressgen_v4(
  *     int base_addr,                                          // base address (byte-aligned)
  *     int d0_len,    int d1_len,    int tot_len               // d0,d1,total length (in number of transactions)
  *     int d0_stride, int d1_stride, int d2_stride,            // d0,d1,d2 strides (in bytes)
@@ -94,8 +94,8 @@
  *   }
  *
  * .. tabularcolumns:: |l|l|J|
- * .. _hwpe_stream_addressgen_v3_params:
- * .. table:: **hwpe_stream_addressgen_v3** design-time parameters.
+ * .. _hwpe_stream_addressgen_v4_params:
+ * .. table:: **hwpe_stream_addressgen_v4** design-time parameters.
  *
  *   +-------------------------+------------------------------------+---------------------------------------------------------------------------------------------+
  *   | **Name**                | **Default**                        | **Description**                                                                             |
@@ -104,10 +104,12 @@
  *   +-------------------------+------------------------------------+---------------------------------------------------------------------------------------------+
  *   | *CNT*                   | 32                                 | Number of bits supported in non-transaction counters, which will overflow at 2^ `CNT`.      |
  *   +-------------------------+------------------------------------+---------------------------------------------------------------------------------------------+
+ *   | *PARTIAL_TILING*        | 0                                  | When 1, enables d0_stride_last_d1/d2 and d2_stride_last_d1 partial-tile boundary handling.  |
+ *   +-------------------------+------------------------------------+---------------------------------------------------------------------------------------------+
  *
  * .. tabularcolumns:: |l|l|J|
- * .. _hwpe_stream_addressgen_v3_ctrl:
- * .. table:: **hwpe_stream_addressgen_v3** input control signals.
+ * .. _hwpe_stream_addressgen_v4_ctrl:
+ * .. table:: **hwpe_stream_addressgen_v4** input control signals.
  *
  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
  *   | **Name**                         | **Type**             | **Description**                                                                                             |
@@ -136,8 +138,8 @@
  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
  *
  * .. tabularcolumns:: |l|l|J|
- * .. _hwpe_stream_addressgen_v3_flags:
- * .. table:: **hwpe_stream_addressgen_v3** output flags.
+ * .. _hwpe_stream_addressgen_v4_flags:
+ * .. table:: **hwpe_stream_addressgen_v4** output flags.
  *
  *   +-----------------+------------------+-----------------------------------------------+
  *   | **Name**        | **Type**         | **Description**                               |
@@ -152,8 +154,9 @@ import hwpe_stream_package::*;
 
 module hwpe_stream_addressgen_v4
 #(
-  parameter int unsigned TRANS_CNT  = 32,
-  parameter int unsigned CNT        = 32,    // number of bits used within the internal counter
+  parameter int unsigned TRANS_CNT      = 32,
+  parameter int unsigned CNT            = 32,    // number of bits used within the internal counter
+  parameter bit          PARTIAL_TILING = 1'b0,  // enable _last stride handling for partial tiles
   parameter bit [3:0] DIM_ENABLE_1H = 4'b1111 // Number of dimensions enabled on HW side
 )
 (
@@ -216,10 +219,11 @@ module hwpe_stream_addressgen_v4
   assign d0_stride         = $signed(ctrl_i.d0_stride);
   assign d0_stride_last_d1 = $signed(ctrl_i.d0_stride_last_d1);
   assign d0_stride_last_d2 = $signed(ctrl_i.d0_stride_last_d2);
-  assign d0_stride_eff =
+  assign d0_stride_eff = PARTIAL_TILING ? (
       ((d0_stride_last_d2 != d0_stride) && (d2_counter_q == ctrl_i.d2_len)) ? d0_stride_last_d2 :
       ((d0_stride_last_d1 != d0_stride) && (d1_counter_q == ctrl_i.d1_len)) ? d0_stride_last_d1 :
-                                                                              d0_stride;
+                                                                              d0_stride
+    ) : d0_stride;
   assign d1_stride         = $signed(ctrl_i.d1_stride);
   assign d2_stride         = $signed(ctrl_i.d2_stride);
   assign d2_stride_last_d1 = $signed(ctrl_i.d2_stride_last_d1);
@@ -362,7 +366,7 @@ module hwpe_stream_addressgen_v4
   end
 
   assign gen_addr_int = ctrl_i.base_addr + d4_addr_q + d3_addr_q +
-                        ((d1_counter_q == ctrl_i.d1_len) ? d2_addr_last_d1_q : d2_addr_q) +
+                        ((PARTIAL_TILING && (d1_counter_q == ctrl_i.d1_len)) ? d2_addr_last_d1_q : d2_addr_q) +
                         d1_addr_q + d0_addr_q;
 
   assign addr_o.data  = gen_addr_int;
