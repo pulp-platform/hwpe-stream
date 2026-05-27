@@ -119,6 +119,8 @@
  *   +-------------------------+------------------------------------+---------------------------------------------------------------------------------------------+
  *   | *CNT*                   | 32                                 | Number of bits supported in non-transaction counters, which will overflow at 2^ `CNT`.      |
  *   +-------------------------+------------------------------------+---------------------------------------------------------------------------------------------+
+ *   | *PARTIAL_TILING*        | 0                                  | When 1, enables d0_stride_last_d1/d2 and d2_stride_last_d1 partial-tile boundary handling.  |
+ *   +-------------------------+------------------------------------+---------------------------------------------------------------------------------------------+
  *
  * .. tabularcolumns:: |l|l|J|
  * .. _hwpe_stream_addressgen_v4_ctrl:
@@ -169,8 +171,9 @@ import hwpe_stream_package::*;
 
 module hwpe_stream_addressgen_v4
 #(
-  parameter int unsigned TRANS_CNT  = 32,
-  parameter int unsigned CNT        = 32,    // number of bits used within the internal counter
+  parameter int unsigned TRANS_CNT      = 32,
+  parameter int unsigned CNT            = 32,    // number of bits used within the internal counter
+  parameter bit          PARTIAL_TILING = 1'b0,  // enable _last stride handling for partial tiles
   parameter bit [3:0] DIM_ENABLE_1H = 4'b1111 // Number of dimensions enabled on HW side
 )
 (
@@ -233,10 +236,11 @@ module hwpe_stream_addressgen_v4
   assign d0_stride         = $signed(ctrl_i.d0_stride);
   assign d0_stride_last_d1 = $signed(ctrl_i.d0_stride_last_d1);
   assign d0_stride_last_d2 = $signed(ctrl_i.d0_stride_last_d2);
-  assign d0_stride_eff =
+  assign d0_stride_eff = PARTIAL_TILING ? (
       ((d0_stride_last_d2 != d0_stride) && (d2_counter_q == ctrl_i.d2_len)) ? d0_stride_last_d2 :
       ((d0_stride_last_d1 != d0_stride) && (d1_counter_q == ctrl_i.d1_len)) ? d0_stride_last_d1 :
-                                                                              d0_stride;
+                                                                              d0_stride
+    ) : d0_stride;
   assign d1_stride         = $signed(ctrl_i.d1_stride);
   assign d2_stride         = $signed(ctrl_i.d2_stride);
   assign d2_stride_last_d1 = $signed(ctrl_i.d2_stride_last_d1);
@@ -379,7 +383,7 @@ module hwpe_stream_addressgen_v4
   end
 
   assign gen_addr_int = ctrl_i.base_addr + d4_addr_q + d3_addr_q +
-                        ((d1_counter_q == ctrl_i.d1_len) ? d2_addr_last_d1_q : d2_addr_q) +
+                        ((PARTIAL_TILING && (d1_counter_q == ctrl_i.d1_len)) ? d2_addr_last_d1_q : d2_addr_q) +
                         d1_addr_q + d0_addr_q;
 
   assign addr_o.data  = gen_addr_int;
