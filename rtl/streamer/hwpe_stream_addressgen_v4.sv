@@ -1,5 +1,5 @@
 /*
- * hwpe_stream_addressgen_v3.sv
+ * hwpe_stream_addressgen_v4.sv
  * Francesco Conti <f.conti@unibo.it>
  *
  * Copyright (C) 2014-2020 ETH Zurich, University of Bologna
@@ -14,12 +14,12 @@
  */
 
 /**
- * The **hwpe_stream_addressgen_v3** module is used to generate addresses to
+ * The **hwpe_stream_addressgen_v4** module is used to generate addresses to
  * load or store HWPE-Stream stream. In this version of the address generator,
  * the address is itself carried within a HWPE-Stream, making it easily stallable.
  * The address generator can be used to generate address from a
- * three-dimensional space, which can be visited with configurable strides in all
- * three dimensions.
+ * four-dimensional space, which can be visited with configurable strides in all
+ * four dimensions.
  *
  * The multiple loop functionality is partially overlapped by the functionality
  * provided by the microcode processor `hwce_ctrl_ucode` that can be embedded
@@ -33,12 +33,12 @@
  *
  * .. code-block:: C
  *
- *   hwpe_stream_addressgen_v3(
- *     int base_addr,                                          // base address (byte-aligned)
- *     int d0_len,    int d1_len,    int tot_len               // d0,d1,total length (in number of transactions)
- *     int d0_stride, int d1_stride, int d2_stride,            // d0,d1,d2 strides (in bytes)
- *     int *d0_addr,  int *d1_addr,  int *d2_addr,             // d0,d1,d2 addresses (by reference)
- *     int *d0_cnt,   int *d1_cnt,   int *ov_cnt               // d0,d1,overall counters (by reference)
+ *   hwpe_stream_addressgen_v4(
+ *     int base_addr,                                                       // base address (byte-aligned)
+ *     int d0_len,    int d1_len,    int d2_len,    int tot_len             // d0,d1,d2,total length (in number of transactions)
+ *     int d0_stride, int d1_stride, int d2_stride, int d3_stride,          // d0,d1,d2,d3 strides (in bytes)
+ *     int *d0_addr,  int *d1_addr,  int *d2_addr,  int *d3_addr,           // d0,d1,d2,d3 addresses (by reference)
+ *     int *d0_cnt,   int *d1_cnt,   int *d2_cnt,   int *ov_cnt             // d0,d1,d2,overall counters (by reference)
  *   ) {
  *     // compute current address
  *     int current_addr = 0;
@@ -49,8 +49,11 @@
  *     else if(dim_enable & 0x2 == 0) { // 2-dimensional streaming
  *       current_addr = base_addr + *d1_addr + *d0_addr;
  *     }
- *     else { // 3-dimensional streaming
+ *     else if(dim_enable & 0x4 == 0) { // 3-dimensional streaming
  *       current_addr = base_addr + *d2_addr + *d1_addr + *d0_addr;
+ *     }
+ *     else { // 4-dimensional streaming
+ *       current_addr = base_addr + *d3_addr + *d2_addr + *d1_addr + *d0_addr;
  *     }
  *     // update counters and dimensional addresses
  *     if(*ov_cnt == tot_len) {
@@ -74,7 +77,7 @@
  *       *d1_cnt  = 1;
  *       *d2_cnt  = *d2_cnt + 1;
  *     }
- *     else {
+ *     else if ((*d3_cnt < d3_len) || (dim_enable & 0x8 == 0)) {
  *       *d0_addr = 0;
  *       *d1_addr = 0;
  *       *d2_addr = 0;
@@ -82,14 +85,26 @@
  *       *d0_cnt  = 1;
  *       *d1_cnt  = 1;
  *       *d2_cnt  = 1;
+ *       *d3_cnt  = *d3_cnt + 1;
+ *     }
+ *     else {
+ *       *d0_addr = 0;
+ *       *d1_addr = 0;
+ *       *d2_addr = 0;
+ *       *d3_addr = 0;
+ *       *d4_addr = *d4_addr + d4_stride;
+ *       *d0_cnt  = 1;
+ *       *d1_cnt  = 1;
+ *       *d2_cnt  = 1;
+ *       *d3_cnt  = 1;
  *     }
  *     *ov_cnt = *ov_cnt + 1;
  *     return current_addr, done;
  *   }
  *
  * .. tabularcolumns:: |l|l|J|
- * .. _hwpe_stream_addressgen_v3_params:
- * .. table:: **hwpe_stream_addressgen_v3** design-time parameters.
+ * .. _hwpe_stream_addressgen_v4_params:
+ * .. table:: **hwpe_stream_addressgen_v4** design-time parameters.
  *
  *   +-------------------------+------------------------------------+---------------------------------------------------------------------------------------------+
  *   | **Name**                | **Default**                        | **Description**                                                                             |
@@ -100,8 +115,8 @@
  *   +-------------------------+------------------------------------+---------------------------------------------------------------------------------------------+
  *
  * .. tabularcolumns:: |l|l|J|
- * .. _hwpe_stream_addressgen_v3_ctrl:
- * .. table:: **hwpe_stream_addressgen_v3** input control signals.
+ * .. _hwpe_stream_addressgen_v4_ctrl:
+ * .. table:: **hwpe_stream_addressgen_v4** input control signals.
  *
  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
  *   | **Name**                         | **Type**             | **Description**                                                                                             |
@@ -114,24 +129,26 @@
  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
  *   | *d0_stride*                      | `logic[31:0]`        | d0 stride in bytes                                                                                          |
  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
- *   | *d0_len*                         | `logic[31:0]`        | d0 length in number of transactions                                                                         |
+ *   | *d1_len*                         | `logic[31:0]`        | d1 length in number of transactions                                                                         |
  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
  *   | *d1_stride*                      | `logic[31:0]`        | d1 stride in bytes                                                                                          |
  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
- *   | *d1_len*                         | `logic[31:0]`        | d1 length in number of transactions                                                                         |
+ *   | *d2_len*                         | `logic[31:0]`        | d2 length in number of transactions                                                                         |
  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
  *   | *d2_stride*                      | `logic[31:0]`        | d2 stride in bytes                                                                                          |
  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
- *   | *d2_len*                         | `logic[31:0]`        | d2 length in number of transactions                                                                         |
+ *   | *d3_len*                         | `logic[31:0]`        | d3 length in number of transactions                                                                         |
  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
  *   | *d3_stride*                      | `logic[31:0]`        | d3 stride in bytes                                                                                          |
- * *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
- *   | *dim_enable_1h*                  | `logic[2:0]`         | One-hot switch to enable 4-d counting (111), 3-d (011), 2-d (001), or 1-d (000).                                          |
+ *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+ *   | *d4_stride*                      | `logic[31:0]`        | d4 stride in bytes                                                                                          |
+ *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
+ *   | *dim_enable_1h*                  | `logic[3:0]`         | One-hot switch to enable 5-d counting (1111), 4-d (0111), 3-d (0011), 2-d (0001), or 1-d (0000).            |
  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
  *
  * .. tabularcolumns:: |l|l|J|
- * .. _hwpe_stream_addressgen_v3_flags:
- * .. table:: **hwpe_stream_addressgen_v3** output flags.
+ * .. _hwpe_stream_addressgen_v4_flags:
+ * .. table:: **hwpe_stream_addressgen_v4** output flags.
  *
  *   +-----------------+------------------+-----------------------------------------------+
  *   | **Name**        | **Type**         | **Description**                               |
