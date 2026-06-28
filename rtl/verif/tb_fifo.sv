@@ -15,7 +15,7 @@
 
 module tb;
 
-  timeunit 1ps;
+  timeunit 1ns;
   timeprecision 1ps;
 
   // parameters
