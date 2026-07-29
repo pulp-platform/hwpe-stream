@@ -8,6 +8,7 @@ hwpe-stream:
   files: [
     rtl/hwpe_stream_package.sv,
     rtl/hwpe_stream_interfaces.sv,
+    rtl/hwpe_stream_transaction_tracer.sv,
     rtl/basic/hwpe_stream_assign.sv,
     rtl/basic/hwpe_stream_mux_static.sv,
     rtl/basic/hwpe_stream_demux_static.sv,
