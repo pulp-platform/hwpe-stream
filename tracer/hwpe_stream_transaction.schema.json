@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/pulp-platform/hwpe-stream/tracer/hwpe_stream_transaction.schema.json",
+  "title": "HWPE-Stream transaction log",
+  "description": "Log of the handshaken beats (valid & ready) observed on a hwpe_stream_intf_stream interface by the hwpe_stream_transaction_tracer module. A HWPE-Stream is unidirectional, hence a single log file per traced interface.",
+  "type": "object",
+  "required": ["schema", "interface", "transactions"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "description": "Schema tag, used to detect that the right kind of log was passed to a tool.",
+      "const": "hwpe_stream_transaction-v1"
+    },
+    "interface": {
+      "description": "Design-time parameters of the traced HWPE-Stream interface.",
+      "type": "object",
+      "required": ["DATA_WIDTH", "ELEMENT_WIDTH"],
+      "additionalProperties": false,
+      "properties": {
+        "DATA_WIDTH": {
+          "description": "Width of the stream data payload, in bits.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "ELEMENT_WIDTH": {
+          "description": "Number of data bits covered by one strobe bit (8 by default, i.e. a byte).",
+          "type": "integer",
+          "minimum": 1
+        },
+        "STRB_WIDTH": {
+          "description": "Width of the strobe, in bits; must be DATA_WIDTH/ELEMENT_WIDTH.",
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "path": {
+      "description": "Hierarchical path of the tracer instance that produced this log.",
+      "type": "string"
+    },
+    "transactions": {
+      "description": "Beats in the order in which they were handshaken.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/beat" }
+    }
+  },
+  "$defs": {
+    "hex": {
+      "description": "Unsigned value, hexadecimal. A '0x' prefix, '_' separators and upper case are all accepted; 'x' and 'z' nibbles denote bits that were unknown in the simulator.",
+      "type": "string",
+      "pattern": "^(0[xX])?[0-9a-fA-FxXzZ_]+$"
+    },
+    "beat": {
+      "description": "One handshaken HWPE-Stream beat.",
+      "type": "object",
+      "required": ["seq", "cycle", "data", "strb"],
+      "additionalProperties": true,
+      "properties": {
+        "seq": {
+          "description": "Index of this beat in the log, from 0.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "cycle": {
+          "description": "Clock cycle of the handshake, counted from the release of rst_ni. Metadata for waveform cross-reference only: it is never compared.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "data": {
+          "description": "Stream data payload, DATA_WIDTH bits.",
+          "$ref": "#/$defs/hex"
+        },
+        "strb": {
+          "description": "Stream strobe, STRB_WIDTH bits; bit i qualifies data bits [ELEMENT_WIDTH*(i+1)-1 : ELEMENT_WIDTH*i].",
+          "$ref": "#/$defs/hex"
+        }
+      }
+    }
+  }
+}
