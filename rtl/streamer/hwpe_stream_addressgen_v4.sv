@@ -18,8 +18,8 @@
  * load or store HWPE-Stream stream. In this version of the address generator,
  * the address is itself carried within a HWPE-Stream, making it easily stallable.
  * The address generator can be used to generate address from a
- * four-dimensional space, which can be visited with configurable strides in all
- * four dimensions.
+ * five-dimensional space, which can be visited with configurable strides in all
+ * five dimensions.
  *
  * The multiple loop functionality is partially overlapped by the functionality
  * provided by the microcode processor `hwce_ctrl_ucode` that can be embedded
@@ -34,60 +34,64 @@
  * .. code-block:: C
  *
  *   hwpe_stream_addressgen_v4(
- *     int base_addr,                                          // base address (byte-aligned)
- *     int d0_len,    int d1_len,    int tot_len               // d0,d1,total length (in number of transactions)
- *     int d0_stride, int d1_stride, int d2_stride,            // d0,d1,d2 strides (in bytes)
- *     int *d0_addr,  int *d1_addr,  int *d2_addr,             // d0,d1,d2 addresses (by reference)
- *     int *d0_cnt,   int *d1_cnt,   int *ov_cnt               // d0,d1,overall counters (by reference)
+ *     int base_addr,                                                          // base address (byte-aligned)
+ *     int d0_len,    int d1_len,    int d2_len,    int d3_len,   int tot_len, // d0..d3,total length (in number of transactions)
+ *     int d0_stride, int d1_stride, int d2_stride, int d3_stride, int d4_stride, // d0..d4 strides (in bytes)
+ *     int *d0_addr,  int *d1_addr,  int *d2_addr,  int *d3_addr,  int *d4_addr,  // d0..d4 addresses (by reference)
+ *     int *d0_cnt,   int *d1_cnt,   int *d2_cnt,   int *d3_cnt,   int *ov_cnt    // d0..d3,overall counters (by reference)
  *   ) {
+ *     // A dimension counts dN_cnt from 1 to len_eff(N), so its index is dN_cnt-1 and
+ *     // it is at its last index when:
+ *     at_top(N)    = (*dN_cnt == len_eff(N));
+ *     // A second length, switched by an outer dimension only: bits at or below N are
+ *     // masked off, which also keeps at_top -> len_eff -> at_top acyclic. tot_len has
+ *     // to account for the shortened sweeps.
+ *     len_eff(N)   = (dN_len_last_1h & at_top & ~((2 << N)-1)) ? dN_len_last : dN_len;
+ *     // A second stride, switched by any dimension. A second address stepped next to
+ *     // the first always holds idx*dN_stride_last, so no multiplier is needed.
+ *     use_last(N)  = (dN_last_1h & at_top) != 0;
+ *     addr(N)      = use_last(N) ? *dN_addr_last : *dN_addr;
+ *     step(N)      = dN_stride;
+ *     step_last(N) = dN_stride_last;
+ *     advance(N) { *dN_addr += step(N); *dN_addr_last += step_last(N); *dN_cnt += 1; }
+ *     reset(N)   { *dN_addr = 0; *dN_addr_last = 0; *dN_cnt = 1; }
  *     // compute current address
  *     int current_addr = 0;
  *     int done = 0;
- *     if (dim_enable & 0x1 == 0) { // 1-dimensional streaming
- *       current_addr = base_addr + *d0_addr;
+ *     if (dim_enable_1h & 0x1 == 0) { // 1-dimensional streaming
+ *       current_addr = base_addr + addr(0);
  *     }
- *     else if(dim_enable & 0x2 == 0) { // 2-dimensional streaming
- *       current_addr = base_addr + *d1_addr + *d0_addr;
+ *     else if(dim_enable_1h & 0x2 == 0) { // 2-dimensional streaming
+ *       current_addr = base_addr + addr(1) + addr(0);
  *     }
- *     else { // 3-dimensional streaming
- *       // On the last d1 iter pick d2_addr_last_d1 (parallel accumulator); set d2_stride_last_d1 = d2_stride to disable
- *       current_addr = base_addr +
- *                      (*d1_cnt == d1_len ? *d2_addr_last_d1 : *d2_addr) +
- *                      *d1_addr + *d0_addr;
+ *     else if(dim_enable_1h & 0x4 == 0) { // 3-dimensional streaming
+ *       current_addr = base_addr + addr(2) + addr(1) + addr(0);
+ *     }
+ *     else if(dim_enable_1h & 0x8 == 0) { // 4-dimensional streaming
+ *       current_addr = base_addr + addr(3) + addr(2) + addr(1) + addr(0);
+ *     }
+ *     else { // 5-dimensional streaming
+ *       current_addr = base_addr + *d4_addr + addr(3) + addr(2) + addr(1) + addr(0);
  *     }
  *     // update counters and dimensional addresses
  *     if(*ov_cnt == tot_len) {
  *       done = 1;
  *     }
- *     if((*d0_cnt < d0_len) || (dim_enable & 0x1 == 0)) {
- *       // Each d0_stride_last_dN is active iff it differs from d0_stride; outermost active dN wins; set _dN = d0_stride to disable
- *       *d0_addr = *d0_addr + (*d2_cnt == d2_len && d0_stride_last_d2 != d0_stride ? d0_stride_last_d2 :
- *                              *d1_cnt == d1_len && d0_stride_last_d1 != d0_stride ? d0_stride_last_d1 : d0_stride);
- *       *d0_cnt  = *d0_cnt + 1;
+ *     if((*d0_cnt < len_eff(0)) || (dim_enable_1h & 0x1 == 0)) {
+ *       advance(0);
  *     }
- *     else if ((*d1_cnt < d1_len) || (dim_enable & 0x2 == 0)) {
- *       *d0_addr = 0;
- *       *d1_addr = *d1_addr + d1_stride;
- *       *d0_cnt  = 1;
- *       *d1_cnt  = *d1_cnt + 1;
+ *     else if ((*d1_cnt < len_eff(1)) || (dim_enable_1h & 0x2 == 0)) {
+ *       reset(0); advance(1);
  *     }
- *     else if ((*d2_cnt < d2_len) || (dim_enable & 0x4 == 0)) {
- *       *d0_addr      = 0;
- *       *d1_addr      = 0;
- *       *d2_addr         = *d2_addr         + d2_stride;
- *       *d2_addr_last_d1 = *d2_addr_last_d1 + d2_stride_last_d1;
- *       *d0_cnt  = 1;
- *       *d1_cnt  = 1;
- *       *d2_cnt  = *d2_cnt + 1;
+ *     else if ((*d2_cnt < len_eff(2)) || (dim_enable_1h & 0x4 == 0)) {
+ *       reset(0); reset(1); advance(2);
+ *     }
+ *     else if ((*d3_cnt < len_eff(3)) || (dim_enable_1h & 0x8 == 0)) {
+ *       reset(0); reset(1); reset(2); advance(3);
  *     }
  *     else {
- *       *d0_addr = 0;
- *       *d1_addr = 0;
- *       *d2_addr = 0;
- *       *d3_addr = *d3_addr + d3_stride;
- *       *d0_cnt  = 1;
- *       *d1_cnt  = 1;
- *       *d2_cnt  = 1;
+ *       reset(0); reset(1); reset(2); reset(3);
+ *       *d4_addr = *d4_addr + d4_stride;
  *     }
  *     *ov_cnt = *ov_cnt + 1;
  *     return current_addr, done;
@@ -104,7 +108,11 @@
  *   +-------------------------+------------------------------------+---------------------------------------------------------------------------------------------+
  *   | *CNT*                   | 32                                 | Number of bits supported in non-transaction counters, which will overflow at 2^ `CNT`.      |
  *   +-------------------------+------------------------------------+---------------------------------------------------------------------------------------------+
- *   | *PARTIAL_TILING*        | 0                                  | When 1, enables d0_stride_last_d1/d2 and d2_stride_last_d1 partial-tile boundary handling.  |
+ *   | *DIM_ENABLE_1H*         | 4'b1111                            | Bit N: dimension N may be bounded. 0 makes it free-run whatever the control says.            |
+ *   +-------------------------+------------------------------------+---------------------------------------------------------------------------------------------+
+ *   | *STRIDE_LAST_1H*        | 4'b0000                            | Bit N: give dimension N a second stride, used at the last index of another one.             |
+ *   +-------------------------+------------------------------------+---------------------------------------------------------------------------------------------+
+ *   | *LEN_LAST_1H*           | 4'b0000                            | Bit N: give dimension N a second length, used at the last index of an outer one.            |
  *   +-------------------------+------------------------------------+---------------------------------------------------------------------------------------------+
  *
  * .. tabularcolumns:: |l|l|J|
@@ -118,23 +126,21 @@
  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
  *   | *tot_len*                        | `logic[31:0]`        | Total number of transactions in stream; only the `TRANS_CNT` LSB are actually used.                         |
  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
- *   | *d0_len*                         | `logic[31:0]`        | d0 length in number of transactions                                                                         |
+ *   | *dN_len*                         | `logic[31:0]`        | dN length in number of transactions (N = 0..3)                                                              |
  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
- *   | *d0_stride*                      | `logic[31:0]`        | d0 stride in bytes                                                                                          |
+ *   | *dN_stride*                      | `logic[31:0]`        | dN stride in bytes (N = 0..3)                                                                               |
  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
- *   | *d0_len*                         | `logic[31:0]`        | d0 length in number of transactions                                                                         |
+ *   | *d4_stride*                      | `logic[31:0]`        | d4 stride in bytes                                                                                          |
  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
- *   | *d1_stride*                      | `logic[31:0]`        | d1 stride in bytes                                                                                          |
+ *   | *dim_enable_1h*                  | `logic[3:0]`         | One-hot switch to enable 5-d counting (1111), 4-d (0111), 3-d (0011), 2-d (0001), or 1-d (0000).            |
  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
- *   | *d1_len*                         | `logic[31:0]`        | d1 length in number of transactions                                                                         |
+ *   | *dN_stride_last*                 | `logic[31:0]`        | Second stride of dimension N, in bytes (N = 0..3).                                                          |
  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
- *   | *d2_stride*                      | `logic[31:0]`        | d2 stride in bytes                                                                                          |
+ *   | *dN_last_1h*                     | `logic[3:0]`         | Bit j: use `dN_stride_last` while dimension j is at its last index. 0 turns it off.                         |
  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
- *   | *d2_len*                         | `logic[31:0]`        | d2 length in number of transactions                                                                         |
+ *   | *dN_len_last*                    | `logic[31:0]`        | Second length of dimension N, in transactions (N = 0..3).                                                   |
  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
- *   | *d3_stride*                      | `logic[31:0]`        | d3 stride in bytes                                                                                          |
- * *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
- *   | *dim_enable_1h*                  | `logic[2:0]`         | One-hot switch to enable 4-d counting (111), 3-d (011), 2-d (001), or 1-d (000).                                          |
+ *   | *dN_len_last_1h*                 | `logic[3:0]`         | Bit j: use `dN_len_last` while dimension j is at its last index. Bits at or below N do nothing.             |
  *   +----------------------------------+----------------------+-------------------------------------------------------------------------------------------------------------+
  *
  * .. tabularcolumns:: |l|l|J|
@@ -154,10 +160,11 @@ import hwpe_stream_package::*;
 
 module hwpe_stream_addressgen_v4
 #(
-  parameter int unsigned TRANS_CNT      = 32,
-  parameter int unsigned CNT            = 32,    // number of bits used within the internal counter
-  parameter bit          PARTIAL_TILING = 1'b0,  // enable _last stride handling for partial tiles
-  parameter bit [3:0] DIM_ENABLE_1H = 4'b1111 // Number of dimensions enabled on HW side
+  parameter int unsigned TRANS_CNT    = 32,
+  parameter int unsigned CNT          = 32,    // number of bits used within the internal counter
+  parameter bit [3:0] DIM_ENABLE_1H   = 4'b1111, // Number of dimensions enabled on HW side
+  parameter bit [3:0] STRIDE_LAST_1H  = 4'b0000, // Dimensions that get a second stride
+  parameter bit [3:0] LEN_LAST_1H     = 4'b0000  // Dimensions that get a second length
 )
 (
   // global signals
@@ -175,16 +182,24 @@ module hwpe_stream_addressgen_v4
 );
 
   logic signed [31:0] d0_stride;
-  logic signed [31:0] d0_stride_last_d1;
-  logic signed [31:0] d0_stride_last_d2;
-  logic signed [31:0] d0_stride_eff;
   logic signed [31:0] d1_stride;
   logic signed [31:0] d2_stride;
-  logic signed [31:0] d2_stride_last_d1;
   logic signed [31:0] d3_stride;
   logic signed [31:0] d4_stride;
 
+  // second stride, used at the last index of the dimensions picked by dN_last_1h
+  logic signed [31:0] d0_stride_last;
+  logic signed [31:0] d1_stride_last;
+  logic signed [31:0] d2_stride_last;
+  logic signed [31:0] d3_stride_last;
 
+  // length in force for this sweep
+  logic [31:0] d0_len_eff, d1_len_eff, d2_len_eff, d3_len_eff;
+
+  // one bit per dimension, like dim_enable_1h
+  logic [3:0] at_top;       // dimension sits at its last index
+  logic [3:0] use_last;     // dimension uses its second stride
+  logic [3:0] use_len_last; // dimension uses its second length
 
   logic [31:0] gen_addr_int;
   logic        done;
@@ -198,9 +213,12 @@ module hwpe_stream_addressgen_v4
   logic [31:0]          d0_addr_d;
   logic [31:0]          d1_addr_d;
   logic [31:0]          d2_addr_d;
-  logic [31:0]          d2_addr_last_d1_d;
   logic [31:0]          d3_addr_d;
   logic [31:0]          d4_addr_d;
+  logic [31:0]          d0_addr_last_d;
+  logic [31:0]          d1_addr_last_d;
+  logic [31:0]          d2_addr_last_d;
+  logic [31:0]          d3_addr_last_d;
   logic [TRANS_CNT-1:0] overall_counter_q;
   logic [CNT-1:0]       d0_counter_q;
   logic [CNT-1:0]       d1_counter_q;
@@ -210,25 +228,52 @@ module hwpe_stream_addressgen_v4
   logic [31:0]          d0_addr_q;
   logic [31:0]          d1_addr_q;
   logic [31:0]          d2_addr_q;
-  logic [31:0]          d2_addr_last_d1_q;
   logic [31:0]          d3_addr_q;
   logic [31:0]          d4_addr_q;
+  logic [31:0]          d0_addr_last_q;
+  logic [31:0]          d1_addr_last_q;
+  logic [31:0]          d2_addr_last_q;
+  logic [31:0]          d3_addr_last_q;
 
   logic        addr_valid_d, addr_valid_q;
 
-  assign d0_stride         = $signed(ctrl_i.d0_stride);
-  assign d0_stride_last_d1 = $signed(ctrl_i.d0_stride_last_d1);
-  assign d0_stride_last_d2 = $signed(ctrl_i.d0_stride_last_d2);
-  assign d0_stride_eff = PARTIAL_TILING ? (
-      ((d0_stride_last_d2 != d0_stride) && (d2_counter_q == ctrl_i.d2_len)) ? d0_stride_last_d2 :
-      ((d0_stride_last_d1 != d0_stride) && (d1_counter_q == ctrl_i.d1_len)) ? d0_stride_last_d1 :
-                                                                              d0_stride
-    ) : d0_stride;
-  assign d1_stride         = $signed(ctrl_i.d1_stride);
-  assign d2_stride         = $signed(ctrl_i.d2_stride);
-  assign d2_stride_last_d1 = $signed(ctrl_i.d2_stride_last_d1);
-  assign d3_stride         = $signed(ctrl_i.d3_stride);
-  assign d4_stride         = $signed(ctrl_i.d4_stride);
+  assign d0_stride = $signed(ctrl_i.d0_stride);
+  assign d1_stride = $signed(ctrl_i.d1_stride);
+  assign d2_stride = $signed(ctrl_i.d2_stride);
+  assign d3_stride = $signed(ctrl_i.d3_stride);
+  assign d4_stride = $signed(ctrl_i.d4_stride);
+
+  // A feature that was not built is not driven: the control field is ignored and the
+  // logic behind it disappears.
+  assign d0_stride_last = STRIDE_LAST_1H[0] ? $signed(ctrl_i.d0_stride_last) : '0;
+  assign d1_stride_last = STRIDE_LAST_1H[1] ? $signed(ctrl_i.d1_stride_last) : '0;
+  assign d2_stride_last = STRIDE_LAST_1H[2] ? $signed(ctrl_i.d2_stride_last) : '0;
+  assign d3_stride_last = STRIDE_LAST_1H[3] ? $signed(ctrl_i.d3_stride_last) : '0;
+
+  // Only a dimension outside N may switch the length of N: an inner one runs a whole
+  // sweep per step of N, so "inner at its last index" does not identify a step of N.
+  // Masking self and inner also breaks the at_top -> len_eff -> at_top path, so no
+  // control field value can make a combinational loop.
+  assign use_len_last[0] = LEN_LAST_1H[0] & (|(at_top & ctrl_i.d0_len_last_1h & 4'b1110));
+  assign use_len_last[1] = LEN_LAST_1H[1] & (|(at_top & ctrl_i.d1_len_last_1h & 4'b1100));
+  assign use_len_last[2] = LEN_LAST_1H[2] & (|(at_top & ctrl_i.d2_len_last_1h & 4'b1000));
+  assign use_len_last[3] = LEN_LAST_1H[3] & (|(at_top & ctrl_i.d3_len_last_1h & 4'b0000));
+
+  assign d0_len_eff = use_len_last[0] ? ctrl_i.d0_len_last : ctrl_i.d0_len;
+  assign d1_len_eff = use_len_last[1] ? ctrl_i.d1_len_last : ctrl_i.d1_len;
+  assign d2_len_eff = use_len_last[2] ? ctrl_i.d2_len_last : ctrl_i.d2_len;
+  assign d3_len_eff = use_len_last[3] ? ctrl_i.d3_len_last : ctrl_i.d3_len;
+
+  // A dimension is at its last index on the final iteration of its sweep.
+  assign at_top[0] = (d0_counter_q == d0_len_eff);
+  assign at_top[1] = (d1_counter_q == d1_len_eff);
+  assign at_top[2] = (d2_counter_q == d2_len_eff);
+  assign at_top[3] = (d3_counter_q == d3_len_eff);
+
+  assign use_last[0] = STRIDE_LAST_1H[0] & (|(at_top & ctrl_i.d0_last_1h));
+  assign use_last[1] = STRIDE_LAST_1H[1] & (|(at_top & ctrl_i.d1_last_1h));
+  assign use_last[2] = STRIDE_LAST_1H[2] & (|(at_top & ctrl_i.d2_last_1h));
+  assign use_last[3] = STRIDE_LAST_1H[3] & (|(at_top & ctrl_i.d3_last_1h));
 
   // address generation
   always_comb
@@ -236,9 +281,12 @@ module hwpe_stream_addressgen_v4
     d0_addr_d         = d0_addr_q;
     d1_addr_d         = d1_addr_q;
     d2_addr_d         = d2_addr_q;
-    d2_addr_last_d1_d    = d2_addr_last_d1_q;
     d3_addr_d         = d3_addr_q;
     d4_addr_d         = d4_addr_q;
+    d0_addr_last_d    = d0_addr_last_q;
+    d1_addr_last_d    = d1_addr_last_q;
+    d2_addr_last_d    = d2_addr_last_q;
+    d3_addr_last_d    = d3_addr_last_q;
     d0_counter_d      = d0_counter_q;
     d1_counter_d      = d1_counter_q;
     d2_counter_d      = d2_counter_q;
@@ -250,47 +298,58 @@ module hwpe_stream_addressgen_v4
     if(addr_o.ready) begin
       if(overall_counter_q < ctrl_i.tot_len) begin
         addr_valid_d = 1'b1;
-        if((d0_counter_q < ctrl_i.d0_len) || (ctrl_i.dim_enable_1h[0] == 1'b0) || (DIM_ENABLE_1H[0] == 1'b0)) begin
-          d0_addr_d    = d0_addr_q + d0_stride_eff;
+        if((d0_counter_q < d0_len_eff) || (ctrl_i.dim_enable_1h[0] == 1'b0) || (DIM_ENABLE_1H[0] == 1'b0)) begin
+          d0_addr_d      = d0_addr_q      + d0_stride;
+          d0_addr_last_d = d0_addr_last_q + d0_stride_last;
           d0_counter_d = d0_counter_q + 1;
         end
-        else if ((d1_counter_q < ctrl_i.d1_len) || (ctrl_i.dim_enable_1h[1] == 1'b0) || (DIM_ENABLE_1H[1] == 1'b0)) begin
-          d0_addr_d    = '0;
-          d1_addr_d    = d1_addr_q + d1_stride;
+        else if ((d1_counter_q < d1_len_eff) || (ctrl_i.dim_enable_1h[1] == 1'b0) || (DIM_ENABLE_1H[1] == 1'b0)) begin
+          d0_addr_d      = '0;
+          d0_addr_last_d = '0;
+          d1_addr_d      = d1_addr_q      + d1_stride;
+          d1_addr_last_d = d1_addr_last_q + d1_stride_last;
           d0_counter_d = 1;
           d1_counter_d = d1_counter_q + 1;
         end
-        else if ((d2_counter_q < ctrl_i.d2_len) || (ctrl_i.dim_enable_1h[2] == 1'b0) || (DIM_ENABLE_1H[2] == 1'b0)) begin
+        else if ((d2_counter_q < d2_len_eff) || (ctrl_i.dim_enable_1h[2] == 1'b0) || (DIM_ENABLE_1H[2] == 1'b0)) begin
           d0_addr_d      = '0;
+          d0_addr_last_d = '0;
           d1_addr_d      = '0;
-          d2_addr_d         = d2_addr_q         + d2_stride;
-          d2_addr_last_d1_d = d2_addr_last_d1_q + d2_stride_last_d1;
-          d0_counter_d   = 1;
-          d1_counter_d   = 1;
-          d2_counter_d   = d2_counter_q + 1;
+          d1_addr_last_d = '0;
+          d2_addr_d      = d2_addr_q      + d2_stride;
+          d2_addr_last_d = d2_addr_last_q + d2_stride_last;
+          d0_counter_d = 1;
+          d1_counter_d = 1;
+          d2_counter_d = d2_counter_q + 1;
         end
-        else if ((d3_counter_q < ctrl_i.d3_len) || (ctrl_i.dim_enable_1h[3] == 1'b0) || (DIM_ENABLE_1H[3] == 1'b0)) begin
+        else if ((d3_counter_q < d3_len_eff) || (ctrl_i.dim_enable_1h[3] == 1'b0) || (DIM_ENABLE_1H[3] == 1'b0)) begin
           d0_addr_d      = '0;
+          d0_addr_last_d = '0;
           d1_addr_d      = '0;
+          d1_addr_last_d = '0;
           d2_addr_d      = '0;
-          d2_addr_last_d1_d = '0;
-          d3_addr_d      = d3_addr_q + d3_stride;
-          d0_counter_d   = 1;
-          d1_counter_d   = 1;
-          d2_counter_d   = 1;
-          d3_counter_d   = d3_counter_q + 1;
+          d2_addr_last_d = '0;
+          d3_addr_d      = d3_addr_q      + d3_stride;
+          d3_addr_last_d = d3_addr_last_q + d3_stride_last;
+          d0_counter_d = 1;
+          d1_counter_d = 1;
+          d2_counter_d = 1;
+          d3_counter_d = d3_counter_q + 1;
         end
         else begin
           d0_addr_d      = '0;
+          d0_addr_last_d = '0;
           d1_addr_d      = '0;
+          d1_addr_last_d = '0;
           d2_addr_d      = '0;
-          d2_addr_last_d1_d = '0;
+          d2_addr_last_d = '0;
           d3_addr_d      = '0;
+          d3_addr_last_d = '0;
           d4_addr_d      = d4_addr_q + d4_stride;
-          d0_counter_d   = 1;
-          d1_counter_d   = 1;
-          d2_counter_d   = 1;
-          d3_counter_d   = 1;
+          d0_counter_d = 1;
+          d1_counter_d = 1;
+          d2_counter_d = 1;
+          d3_counter_d = 1;
           d4_counter_d = d4_counter_q + 1;
         end
         overall_counter_d = overall_counter_q + 1;
@@ -306,16 +365,20 @@ module hwpe_stream_addressgen_v4
   always_ff @(posedge clk_i or negedge rst_ni)
   begin : address_gen_counters_d0_ff
     if (~rst_ni) begin
-      d0_addr_q <= '0;
+      d0_addr_q      <= '0;
+      d0_addr_last_q <= '0;
     end
     else if (clear_i) begin
-      d0_addr_q <= '0;
+      d0_addr_q      <= '0;
+      d0_addr_last_q <= '0;
     end
     else if (presample_i) begin
-      d0_addr_q <= '0;
+      d0_addr_q      <= '0;
+      d0_addr_last_q <= '0;
     end
     else if (enable_i) begin
-      d0_addr_q <= d0_addr_d;
+      d0_addr_q      <= d0_addr_d;
+      d0_addr_last_q <= d0_addr_last_d;
     end
   end
 
@@ -324,9 +387,11 @@ module hwpe_stream_addressgen_v4
     if (~rst_ni) begin
       d1_addr_q         <= '0;
       d2_addr_q         <= '0;
-      d2_addr_last_d1_q    <= '0;
       d3_addr_q         <= '0;
       d4_addr_q         <= '0;
+      d1_addr_last_q    <= '0;
+      d2_addr_last_q    <= '0;
+      d3_addr_last_q    <= '0;
       d0_counter_q      <= '0;
       d1_counter_q      <= 1;
       d2_counter_q      <= 1;
@@ -338,9 +403,11 @@ module hwpe_stream_addressgen_v4
     else if (clear_i) begin
       d1_addr_q         <= '0;
       d2_addr_q         <= '0;
-      d2_addr_last_d1_q    <= '0;
       d3_addr_q         <= '0;
       d4_addr_q         <= '0;
+      d1_addr_last_q    <= '0;
+      d2_addr_last_q    <= '0;
+      d3_addr_last_q    <= '0;
       d0_counter_q      <= '0;
       d1_counter_q      <= 1;
       d2_counter_q      <= 1;
@@ -352,9 +419,11 @@ module hwpe_stream_addressgen_v4
     else if(enable_i) begin
       d1_addr_q         <= d1_addr_d;
       d2_addr_q         <= d2_addr_d;
-      d2_addr_last_d1_q    <= d2_addr_last_d1_d;
       d3_addr_q         <= d3_addr_d;
       d4_addr_q         <= d4_addr_d;
+      d1_addr_last_q    <= d1_addr_last_d;
+      d2_addr_last_q    <= d2_addr_last_d;
+      d3_addr_last_q    <= d3_addr_last_d;
       d0_counter_q      <= d0_counter_d;
       d1_counter_q      <= d1_counter_d;
       d2_counter_q      <= d2_counter_d;
@@ -365,9 +434,11 @@ module hwpe_stream_addressgen_v4
     end
   end
 
-  assign gen_addr_int = ctrl_i.base_addr + d4_addr_q + d3_addr_q +
-                        ((PARTIAL_TILING && (d1_counter_q == ctrl_i.d1_len)) ? d2_addr_last_d1_q : d2_addr_q) +
-                        d1_addr_q + d0_addr_q;
+  assign gen_addr_int = ctrl_i.base_addr + d4_addr_q +
+                        (use_last[3] ? d3_addr_last_q : d3_addr_q) +
+                        (use_last[2] ? d2_addr_last_q : d2_addr_q) +
+                        (use_last[1] ? d1_addr_last_q : d1_addr_q) +
+                        (use_last[0] ? d0_addr_last_q : d0_addr_q);
 
   assign addr_o.data  = gen_addr_int;
   assign addr_o.strb  = '1;
