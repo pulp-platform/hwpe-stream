@@ -93,6 +93,8 @@ package hwpe_stream_package;
     logic         [3:0] d3_len_last_1h;
     logic signed [31:0] d4_stride;
     logic         [3:0] dim_enable_1h;
+    logic         [3:0] alternate_1h;
+    logic         [3:0] alt_skip_1h;
   } ctrl_addressgen_v4_t;
 
   typedef struct packed {
