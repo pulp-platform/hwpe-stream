@@ -30,7 +30,6 @@ sources:
       - rtl/basic/hwpe_stream_split.sv
       - rtl/fifo/hwpe_stream_fifo_ctrl.sv
       - rtl/fifo/hwpe_stream_fifo_scm.sv
-      - rtl/hwpe_stream_transaction_tracer.sv
       - rtl/streamer/hwpe_stream_addressgen.sv
       - rtl/streamer/hwpe_stream_addressgen_v2.sv
       - rtl/streamer/hwpe_stream_addressgen_v3.sv
@@ -60,6 +59,11 @@ sources:
       - rtl/tcdm/hwpe_stream_tcdm_fifo_store.sv
       # Level 5
       - rtl/streamer/hwpe_stream_sink.sv
+
+      - target: not(synthesis)
+        files:
+          - rtl/hwpe_stream_transaction_tracer.sv
+
       - target: test
         files:
           - rtl/verif/hwpe_stream_traffic_gen.sv
